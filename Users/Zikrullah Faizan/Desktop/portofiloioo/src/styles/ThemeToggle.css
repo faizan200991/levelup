@@ -1,0 +1,35 @@
+body.dark-theme {
+  background: linear-gradient(135deg, #0a0a1a 0%, #181824 100%) !important;
+  color: #e0e0e0 !important;
+}
+body.dark-theme .glass {
+  background: rgba(20, 20, 40, 0.85) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.27) !important;
+}
+body.dark-theme .gradient-text {
+  background: linear-gradient(90deg, #00e6ff, #6c63ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+body.dark-theme .btn-primary {
+  background-color: #6c63ff !important;
+  border-color: #6c63ff !important;
+}
+body.dark-theme .btn-outline-info {
+  color: #00e6ff !important;
+  border-color: #00e6ff !important;
+}
+body.dark-theme .sidebar {
+  background: rgba(10, 10, 30, 0.95) !important;
+}
+.theme-toggle-btn {
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
