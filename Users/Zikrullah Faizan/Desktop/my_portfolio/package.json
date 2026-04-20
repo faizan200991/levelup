@@ -1,0 +1,12 @@
+{
+  "name": "my_portfolio",
+  "version": "1.0.0",
+  "description": "Personal portfolio static site",
+  "scripts": {
+    "start": "live-server --open=index.html",
+    "dev": "live-server --open=index.html"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
