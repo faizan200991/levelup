@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["teacher", "student"] },
+        "photoURL": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role", "createdAt"]
+    },
+    "Class": {
+      "title": "Class",
+      "description": "Classroom details",
+      "type": "object",
+      "properties": {
+        "className": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "roomCode": { "type": "string" },
+        "studentIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["className", "teacherId", "roomCode", "createdAt"]
+    },
+    "Problem": {
+      "title": "Problem",
+      "description": "Coding problem description",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["exercise", "assignment"] },
+        "language": { "type": "string" },
+        "instructionsUrl": { "type": "string", "format": "uri" },
+        "starterCode": { "type": "string" },
+        "sampleInput": { "type": "string" },
+        "expectedOutput": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "language", "createdAt"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Student problem submission",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "problemId": { "type": "string" },
+        "code": { "type": "string" },
+        "output": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "correct", "incorrect"] },
+        "feedback": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "problemId", "code", "status", "submittedAt"]
+    },
+    "LiveCode": {
+      "title": "LiveCode",
+      "description": "Real-time code synchronization data",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "code": { "type": "string" },
+        "language": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "code", "lastUpdated"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "Classroom study materials (PDFs, notes)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "url", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/classes/{classId}": {
+      "schema": "Class",
+      "description": "Classrooms"
+    },
+    "/classes/{classId}/problems/{problemId}": {
+      "schema": "Problem",
+      "description": "Problems within a class"
+    },
+    "/classes/{classId}/resources/{resourceId}": {
+      "schema": "Resource",
+      "description": "Study materials for a class"
+    },
+    "/classes/{classId}/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "Submissions for a class problem"
+    },
+    "/classes/{classId}/liveCode/{studentId}": {
+      "schema": "LiveCode",
+      "description": "Live code snapshots for teachers to monitor"
+    }
+  }
+}
