@@ -17,32 +17,50 @@ export function useAuth() {
       
       if (firebaseUser) {
         console.log("Auth state changed: User is logged in", firebaseUser.uid);
-        // Use onSnapshot to catch the document even if it's created a few ms after auth
-        unsubProfile = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
-          console.log("Profile snapshot received. Exists:", docSnap.exists());
-          if (docSnap.exists()) {
-            setProfile({ uid: firebaseUser.uid, ...docSnap.data() } as UserProfile);
-            setLoading(false);
-          } else {
-            console.warn("Profile document does not exist for user:", firebaseUser.uid);
-            setProfile(null);
-            // Don't set loading false yet, maybe it's still being created
-          }
-        }, (error) => {
-          console.error("Profile sync error for UID:", firebaseUser.uid, error);
-          try {
-            handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
-          } catch (e) {
-            setLoading(false);
-          }
-        });
+        
+        const startSync = () => {
+          if (unsubProfile) unsubProfile();
+          unsubProfile = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
+            console.log("Profile snapshot received. Exists:", docSnap.exists());
+            if (docSnap.exists()) {
+              setProfile({ uid: firebaseUser.uid, ...docSnap.data() } as UserProfile);
+              setLoading(false);
+            } else {
+              setProfile(null);
+            }
+          }, (error) => {
+            // Ignore permission errors during logout or if user is null
+            if (!auth.currentUser || error.code === 'permission-denied') {
+              console.warn("Profile sync permission denied or user logged out.");
+              return;
+            }
+            
+            console.error("Profile sync error for UID:", firebaseUser.uid, error);
+            try {
+              handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+            } catch (e) {
+              setLoading(false);
+            }
+          });
+        };
+
+        // Small delay to ensure Firestore has the auth token correctly
+        const syncTimeout = setTimeout(startSync, 150);
 
         // Safety timeout to prevent infinite loading if profile doc is missing
-        const timeout = setTimeout(() => {
+        const profileTimeout = setTimeout(() => {
           setLoading(false);
-        }, 5000);
-        return () => clearTimeout(timeout);
+        }, 8000);
+        
+        return () => {
+          clearTimeout(syncTimeout);
+          clearTimeout(profileTimeout);
+        };
       } else {
+        if (unsubProfile) {
+          unsubProfile();
+          unsubProfile = undefined;
+        }
         setProfile(null);
         setLoading(false);
       }
