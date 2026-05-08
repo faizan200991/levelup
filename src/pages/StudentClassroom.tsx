@@ -27,7 +27,19 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export default function StudentClassroom({ classroom }: { classroom: ClassRoom }) {
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+export default function StudentClassroom({ 
+  classroom, 
+  theme, 
+  setTheme 
+}: { 
+  classroom: ClassRoom, 
+  theme: 'vs-dark' | 'light',
+  setTheme: (t: 'vs-dark' | 'light') => void 
+}) {
   const { user, profile } = useAuth();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
@@ -38,7 +50,6 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [activePanel, setActivePanel] = useState<'problem' | 'resources'>('problem');
-  const [theme, setTheme] = useState<'vs-dark' | 'light' | 'hc-black'>('vs-dark');
   const [teacherProfile, setTeacherProfile] = useState<UserProfile | null>(null);
   
   const lastSyncRef = useRef<number>(0);
@@ -118,8 +129,8 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
       try {
         await setDoc(doc(db, 'classes', classroom.id, 'liveCode', user.uid), {
           studentId: user.uid,
-          studentName: profile?.name,
-          studentPhotoURL: profile?.photoURL,
+          studentName: profile?.name || 'Student',
+          studentPhotoURL: profile?.photoURL || null,
           code,
           language: selectedProblem.language,
           lastUpdated: new Date().toISOString()
@@ -190,8 +201,8 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
     try {
       await addDoc(collection(db, 'classes', classroom.id, 'submissions'), {
         studentId: user.uid,
-        studentName: profile?.name,
-        studentPhotoURL: profile?.photoURL,
+        studentName: profile?.name || 'Student',
+        studentPhotoURL: profile?.photoURL || null,
         problemId: selectedProblem.id,
         problemTitle: selectedProblem.title,
         language: selectedProblem.language,
@@ -233,7 +244,7 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
   return (
     <div className={cn(
       "flex flex-col h-screen overflow-hidden transition-colors duration-500",
-      theme === 'light' ? "bg-zinc-50 text-zinc-950" : "bg-zinc-950 text-white"
+      theme === 'light' ? "bg-white text-zinc-950 font-medium" : "bg-zinc-950 text-zinc-100"
     )}>
       {/* Premium Header */}
       <header className={cn(
@@ -243,11 +254,11 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
         <div className="flex items-center gap-4">
           <Link to="/dashboard" className={cn(
             "transition-all group flex items-center gap-2",
-            theme === 'light' ? "text-zinc-400 hover:text-zinc-950" : "text-zinc-500 hover:text-white"
+            theme === 'light' ? "text-zinc-600 hover:text-zinc-950" : "text-zinc-500 hover:text-white"
           )}>
             <div className={cn(
               "w-7 h-7 rounded-lg border flex items-center justify-center transition-all",
-              theme === 'light' ? "bg-zinc-100 border-zinc-200 group-hover:bg-zinc-950 group-hover:text-white" : "bg-zinc-900 border-zinc-800 group-hover:bg-white group-hover:text-zinc-950"
+              theme === 'light' ? "bg-zinc-50 border-zinc-200 group-hover:bg-zinc-950 group-hover:text-white" : "bg-zinc-900 border-zinc-800 group-hover:bg-white group-hover:text-zinc-950"
             )}>
               <ChevronRight className="w-3.5 h-3.5 rotate-180" />
             </div>
@@ -256,8 +267,8 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
           <div className={cn("h-5 w-px", theme === 'light' ? "bg-zinc-200" : "bg-zinc-800")} />
           <div className="flex items-center gap-2.5">
             <h1 className={cn("font-display font-bold text-base tracking-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>{classroom.className}</h1>
-            <div className={cn("px-2 py-0.5 rounded-md border", theme === 'light' ? "bg-zinc-100 border-zinc-200" : "bg-zinc-900 border-zinc-800")}>
-               <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{classroom.roomCode}</span>
+            <div className={cn("px-2 py-0.5 rounded-md border", theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900 border-zinc-800")}>
+               <span className={cn("text-[9px] font-mono uppercase tracking-widest", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>{classroom.roomCode}</span>
             </div>
           </div>
         </div>
@@ -269,31 +280,26 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
           )}>
             <button 
               onClick={() => setTheme('light')} 
-              className={cn("p-1.5 rounded-md transition-all", theme === 'light' ? "bg-white text-zinc-950 shadow-lg" : "text-zinc-500 hover:text-zinc-950")}
+              className={cn("p-1.5 rounded-md transition-all flex items-center gap-2 px-3", theme === 'light' ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-950")}
               title="Light Theme"
             >
               <Sun className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold">Light</span>
             </button>
             <button 
               onClick={() => setTheme('vs-dark')} 
-              className={cn("p-1.5 rounded-md transition-all", theme === 'vs-dark' ? "bg-white text-zinc-950 shadow-lg" : "text-zinc-500 hover:text-white")}
+              className={cn("p-1.5 rounded-md transition-all flex items-center gap-2 px-3", theme === 'vs-dark' ? "bg-zinc-800 text-white shadow-lg" : "text-zinc-500 hover:text-white")}
               title="Dark Theme"
             >
               <Moon className="w-3.5 h-3.5" />
-            </button>
-            <button 
-              onClick={() => setTheme('hc-black')} 
-              className={cn("p-1.5 rounded-md transition-all", theme === 'hc-black' ? "bg-white text-zinc-950 shadow-lg" : "text-zinc-500 hover:text-white")}
-              title="Matrix Theme"
-            >
-              <Zap className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold">Dark</span>
             </button>
           </div>
 
           <Link to="/ai-tutor">
             <Button size="sm" variant="ghost" className={cn(
               "rounded-xl group transition-all text-xs border border-transparent",
-              theme === 'light' ? "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 hover:border-zinc-200" : "text-zinc-400 hover:text-white hover:bg-white/5 hover:border-zinc-800"
+              theme === 'light' ? "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100 hover:border-zinc-200" : "text-zinc-400 hover:text-white hover:bg-white/5 hover:border-zinc-800"
             )}>
               <Sparkles className="w-3.5 h-3.5 mr-2 text-amber-500 group-hover:scale-125 transition-transform" /> AI Tutor
             </Button>
@@ -317,11 +323,11 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
               onClick={handleSubmit} 
               isLoading={isSubmitting}
               className={cn(
-                "rounded-xl font-black uppercase text-[9px] tracking-widest h-9 px-6 shadow-2xl transition-all",
-                theme === 'light' ? "bg-zinc-950 text-white hover:bg-zinc-800 shadow-zinc-200" : "bg-white text-zinc-950 hover:bg-zinc-200 shadow-white/5"
+                "rounded-xl font-black uppercase text-[10px] tracking-widest h-9 px-6 shadow-2xl transition-all",
+                theme === 'light' ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200" : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-900/40"
               )}
             >
-              Push
+              Submit
             </Button>
           </div>
         </div>
@@ -330,43 +336,43 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Side: Tasks & Resources (Glassmorphism Sidebar) */}
         <div className={cn(
-          "w-[450px] border-r flex flex-col relative z-40 overflow-hidden transition-colors duration-500",
-          theme === 'light' ? "bg-white border-zinc-200" : "bg-zinc-950 border-zinc-900"
-        )}>
-          <div className="p-6 pb-4 flex gap-4">
-            <button 
-              onClick={() => setActivePanel('problem')}
-              className={cn(
-                "flex-1 h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden",
-                activePanel === 'problem' 
-                  ? (theme === 'light' ? "text-zinc-950" : "text-white") 
-                  : "text-zinc-600 hover:text-zinc-400"
-              )}
-            >
-              Mission Log
-              {activePanel === 'problem' && (
-                <motion.div layoutId="panel-active" className={cn(
-                  "absolute inset-0 border -z-10 rounded-xl shadow-inner",
-                  theme === 'light' ? "bg-zinc-100 border-zinc-200 shadow-zinc-200" : "bg-white/5 border-white/10 shadow-white/5"
-                )} />
-              )}
-            </button>
-            <button 
-              onClick={() => setActivePanel('resources')}
-              className={cn(
-                "flex-1 h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden flex items-center justify-center gap-2",
-                activePanel === 'resources' 
-                  ? (theme === 'light' ? "text-zinc-950" : "text-white") 
-                  : "text-zinc-600 hover:text-zinc-400"
-              )}
-            >
-              Resources
-              {activePanel === 'resources' && (
-                <motion.div layoutId="panel-active" className={cn(
-                  "absolute inset-0 border -z-10 rounded-xl shadow-inner",
-                  theme === 'light' ? "bg-zinc-100 border-zinc-200 shadow-zinc-200" : "bg-white/5 border-white/10 shadow-white/5"
-                )} />
-              )}
+                "w-[450px] border-r flex flex-col relative z-40 overflow-hidden transition-colors duration-500",
+                theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950 border-zinc-900"
+              )}>
+                <div className="p-6 pb-4 flex gap-4">
+                  <button 
+                    onClick={() => setActivePanel('problem')}
+                    className={cn(
+                      "flex-1 h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden",
+                      activePanel === 'problem' 
+                        ? (theme === 'light' ? "text-zinc-950" : "text-white") 
+                        : "text-zinc-500 hover:text-zinc-400"
+                    )}
+                  >
+                    Assignments
+                    {activePanel === 'problem' && (
+                      <motion.div layoutId="panel-active" className={cn(
+                        "absolute inset-0 border -z-10 rounded-xl shadow-inner",
+                        theme === 'light' ? "bg-white border-zinc-200 shadow-zinc-200" : "bg-white/5 border-white/10 shadow-white/5"
+                      )} />
+                    )}
+                  </button>
+                  <button 
+                    onClick={() => setActivePanel('resources')}
+                    className={cn(
+                      "flex-1 h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden flex items-center justify-center gap-2",
+                      activePanel === 'resources' 
+                        ? (theme === 'light' ? "text-zinc-950" : "text-white") 
+                        : "text-zinc-500 hover:text-zinc-400"
+                    )}
+                  >
+                    Resources
+                    {activePanel === 'resources' && (
+                      <motion.div layoutId="panel-active" className={cn(
+                        "absolute inset-0 border -z-10 rounded-xl shadow-inner",
+                        theme === 'light' ? "bg-white border-zinc-200 shadow-zinc-200" : "bg-white/5 border-white/10 shadow-white/5"
+                      )} />
+                    )}
               {resources.length > 0 && (
                 <span className="w-1 h-1 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
               )}
@@ -383,7 +389,7 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                   exit={{ opacity: 0, x: 20 }}
                   className="space-y-6 mt-6"
                 >
-                  <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] mb-4 block ml-1", theme === 'light' ? "text-zinc-400" : "text-zinc-600")}>Deployment Queue</label>
+                  <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] mb-4 block ml-1", theme === 'light' ? "text-zinc-500" : "text-zinc-600")}>Class Projects</label>
                   
                   <div className="space-y-3">
                     {problems.map(p => (
@@ -396,16 +402,16 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                         className={cn(
                           "w-full p-4 rounded-3xl border text-left transition-all group relative overflow-hidden",
                           selectedProblem?.id === p.id 
-                            ? (theme === 'light' ? "bg-white border-zinc-950 shadow-xl" : "bg-white border-white shadow-[0_0_40px_rgba(255,255,255,0.1)]")
-                            : (theme === 'light' ? "bg-white border-zinc-100 hover:border-zinc-300" : "bg-zinc-900 border-zinc-800 hover:border-zinc-700")
+                            ? (theme === 'light' ? "bg-zinc-950 border-black shadow-xl" : "bg-white border-white shadow-[0_0_40px_rgba(255,255,255,0.1)]")
+                            : (theme === 'light' ? "bg-white border-zinc-200 hover:border-zinc-400" : "bg-zinc-900 border-zinc-800 hover:border-zinc-700")
                         )}
                       >
                         <div className="flex items-center gap-4 relative z-10 transition-transform duration-500 group-hover:translate-x-1">
                           <div className={cn(
                             "w-10 h-10 rounded-xl border flex items-center justify-center p-2 transition-all",
                             selectedProblem?.id === p.id 
-                              ? "bg-zinc-950 border-zinc-800 text-white" 
-                              : (theme === 'light' ? "bg-zinc-50 border-zinc-100" : "bg-zinc-950 border-zinc-800")
+                              ? (theme === 'light' ? "bg-white border-zinc-200 text-zinc-950" : "bg-black border-zinc-800 text-white") 
+                              : (theme === 'light' ? "bg-zinc-50 border-zinc-100 text-zinc-950" : "bg-zinc-950 border-zinc-800 text-white")
                           )}>
                             <img src={getLanguageIcon(p.language)} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                           </div>
@@ -413,23 +419,15 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                             <p className={cn(
                               "text-sm font-bold tracking-tight",
                               selectedProblem?.id === p.id 
-                                ? (theme === 'light' ? "text-zinc-950" : "text-zinc-950") // For dark theme, selected is white bg with black text? wait
+                                ? (theme === 'light' ? "text-white" : "text-zinc-950") 
                                 : (theme === 'light' ? "text-zinc-950" : "text-zinc-200")
                             )}>{p.title}</p>
                             <p className={cn(
                               "text-[9px] font-black uppercase tracking-[0.1em] opacity-40 mt-0.5",
-                              selectedProblem?.id === p.id ? "text-zinc-950" : ""
+                              selectedProblem?.id === p.id ? (theme === 'light' ? "text-zinc-200" : "text-zinc-900") : (theme === 'light' ? "text-zinc-600" : "text-zinc-500")
                             )}>{p.type || 'EXERCISE'} • {p.language}</p>
                           </div>
                         </div>
-                        {selectedProblem?.id === p.id && (
-                          <div className={cn(
-                            "absolute top-0 right-0 p-4 opacity-50",
-                            theme === 'light' ? "text-zinc-950" : "text-zinc-950"
-                          )}>
-                            <Zap className="w-3 h-3 fill-current" />
-                          </div>
-                        )}
                       </button>
                     ))}
                   </div>
@@ -438,7 +436,7 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                     <div className="pt-8 border-t border-zinc-100 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h2 className={cn("text-2xl font-display font-bold tracking-tight leading-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>{selectedProblem.title}</h2>
+                          <h2 className={cn("text-2xl font-display font-bold tracking-tight leading-tight", theme === 'light' ? "text-black" : "text-white")}>{selectedProblem.title}</h2>
                           <div className={cn(
                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-2xl",
                             selectedProblem.type === 'assignment' 
@@ -450,20 +448,20 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                         </div>
 
                       {teacherProfile && (
-                        <div className={cn("flex items-center gap-3 p-3 rounded-2xl border", theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-white/5 border-white/10")}>
-                          <div className={cn("w-8 h-8 rounded-xl overflow-hidden border", theme === 'light' ? "border-zinc-200" : "border-white/10")}>
-                            <img 
-                              src={teacherProfile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${teacherProfile.uid}`} 
-                              alt={teacherProfile.name} 
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
+                        <Link to={`/profile/${teacherProfile.uid}`}>
+                          <div className={cn("flex items-center gap-3 p-3 rounded-2xl border transition-all hover:border-blue-600 hover:shadow-lg group/teacher cursor-pointer", theme === 'light' ? "bg-zinc-100 border-zinc-200" : "bg-white/5 border-white/10")}>
+                            <div className={cn("w-8 h-8 rounded-xl overflow-hidden border", theme === 'light' ? "border-zinc-300" : "border-white/10")}>
+                              <img 
+                                src={teacherProfile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${teacherProfile.uid}`} 
+                                alt={teacherProfile.name} 
+                                className="w-full h-full object-cover group-hover/teacher:scale-110 transition-transform"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                            <p className={cn("text-[8px] font-black uppercase tracking-[0.2em]", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Teacher</p>
+                            <p className={cn("text-[11px] font-bold group-hover/teacher:text-blue-600 transition-colors", theme === 'light' ? "text-zinc-950" : "text-zinc-300")}>{teacherProfile.name}</p>
                           </div>
-                          <div>
-                            <p className={cn("text-[8px] font-black uppercase tracking-[0.2em]", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Curated By</p>
-                            <p className={cn("text-[10px] font-bold", theme === 'light' ? "text-zinc-700" : "text-zinc-300")}>{teacherProfile.name}</p>
-                          </div>
-                        </div>
+                        </Link>
                       )}
 
                       {selectedProblem.instructionsUrl && (
@@ -479,13 +477,13 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                           <div className="flex items-center gap-4">
                             <div className={cn(
                               "w-12 h-12 rounded-2xl border flex items-center justify-center transition-all",
-                              theme === 'light' ? "bg-white border-zinc-100 group-hover:bg-zinc-900 group-hover:text-white" : "bg-white/5 border-white/10 group-hover:bg-zinc-950 group-hover:text-white"
+                              theme === 'light' ? "bg-white border-zinc-200 group-hover:bg-zinc-950 group-hover:text-white" : "bg-white/5 border-white/10 group-hover:bg-zinc-950 group-hover:text-white"
                             )}>
                               <FileText className="w-5 h-5" />
                             </div>
                             <div>
-                              <p className="text-sm font-bold">Specs v1.0</p>
-                              <p className="text-[10px] uppercase font-black tracking-widest opacity-50">Technical PDF</p>
+                              <p className={cn("text-sm font-bold", theme === 'light' ? "group-hover:text-white" : "")}>Project Handout</p>
+                              <p className={cn("text-[10px] uppercase font-black tracking-widest", theme === 'light' ? "text-zinc-600 group-hover:text-zinc-400" : "opacity-50")}>Instructions PDF</p>
                             </div>
                           </div>
                           <ExternalLink className="w-4 h-4 opacity-30 group-hover:opacity-100" />
@@ -495,34 +493,74 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
 
                     <div className={cn(
                       "p-6 rounded-[2rem] border relative overflow-hidden group transition-colors",
-                      theme === 'light' ? "bg-zinc-100 border-zinc-200" : "bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-900"
+                      theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-900"
                     )}>
                       <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-[80px] opacity-[0.02] -mr-16 -mt-16 group-hover:opacity-[0.05] transition-opacity" />
-                      <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] mb-4 block", theme === 'light' ? "text-zinc-400" : "text-zinc-600")}>Requirements</label>
-                      <div className={cn("text-sm leading-relaxed whitespace-pre-wrap font-medium", theme === 'light' ? "text-zinc-600" : "text-zinc-400")}>
-                        {selectedProblem.description}
+                      <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] mb-4 block", theme === 'light' ? "text-zinc-700" : "text-zinc-600")}>Requirements</label>
+                      <div className={cn(
+                        "text-sm leading-relaxed whitespace-pre-wrap font-medium markdown-body",
+                        theme === 'light' ? "text-zinc-950" : "text-zinc-100"
+                      )}>
+                        <ReactMarkdown
+                          components={{
+                            code({ node, inline, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              return !inline && match ? (
+                                <div className={cn(
+                                  "my-6 rounded-2xl overflow-hidden border shadow-2xl",
+                                  theme === 'light' ? "border-zinc-200" : "border-zinc-800"
+                                )}>
+                                  <div className={cn(
+                                    "px-4 py-2 border-b flex justify-between items-center",
+                                    theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-black/40 border-zinc-800"
+                                  )}>
+                                    <span className={cn("text-[10px] font-black uppercase tracking-widest", theme === 'light' ? "text-zinc-500" : "text-zinc-500")}>{match[1]}</span>
+                                  </div>
+                                  <SyntaxHighlighter
+                                    style={theme === 'light' ? prism : vscDarkPlus}
+                                    language={match[1]}
+                                    PreTag="div"
+                                    customStyle={{ margin: 0, padding: '24px', fontSize: '13px', backgroundColor: theme === 'light' ? '#f8fafc' : '#0c0c0e' }}
+                                    {...props}
+                                  >
+                                    {String(children).replace(/\n$/, '')}
+                                  </SyntaxHighlighter>
+                                </div>
+                              ) : (
+                                <code className={cn(
+                                  "px-2 py-0.5 rounded-lg font-bold font-mono text-[0.85em]",
+                                  theme === 'light' ? "bg-zinc-100 text-zinc-950" : "bg-white/5 text-blue-400"
+                                )} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            }
+                          }}
+                        >
+                          {selectedProblem.description}
+                        </ReactMarkdown>
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <label className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] ml-1">Submission Log</label>
+                      <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-500" : "text-zinc-600")}>Submission Log</label>
                       <div className="space-y-3">
                         {submissions.length === 0 ? (
-                          <div className={cn("p-10 text-center border border-dashed rounded-[2rem]", theme === 'light' ? "bg-zinc-50 border-zinc-200 text-zinc-400" : "bg-zinc-950 border-zinc-900 text-zinc-600")}>
-                             <p className="text-xs font-bold italic">No records detected in buffer.</p>
+                          <div className={cn("p-10 text-center border border-dashed rounded-[2rem]", theme === 'light' ? "bg-zinc-100 border-zinc-200 text-zinc-500" : "bg-zinc-950 border-zinc-900 text-zinc-600")}>
+                             <p className="text-xs font-bold italic">No submissions yet.</p>
                           </div>
                         ) : (
                           submissions.map(sub => (
                             <div key={sub.id} className={cn(
                               "p-5 rounded-3xl border backdrop-blur-md relative group overflow-hidden transition-all",
-                              theme === 'light' ? "bg-white border-zinc-200" : "bg-zinc-900/40 border-zinc-900 shadow-2xl"
+                              theme === 'light' ? "bg-white border-zinc-200 shadow-sm" : "bg-zinc-900/40 border-zinc-900 shadow-2xl"
                             )}>
-                              <div className={cn("absolute top-0 left-0 w-1 h-full transition-colors", theme === 'light' ? "bg-zinc-100 group-hover:bg-zinc-950" : "bg-zinc-800 group-hover:bg-white")} />
+                              <div className={cn("absolute top-0 left-0 w-1 h-full transition-colors", theme === 'light' ? "bg-zinc-200 group-hover:bg-zinc-950" : "bg-zinc-800 group-hover:bg-white")} />
                               <div className="flex justify-between items-center mb-4">
-                                <span className={cn("text-[11px] font-mono uppercase tracking-widest", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>
+                                <span className={cn("text-[11px] font-mono uppercase tracking-widest", theme === 'light' ? "text-zinc-500" : "text-zinc-500")}>
                                   {new Date(sub.submittedAt).toLocaleTimeString()}
                                 </span>
-                                <StatusBadge status={sub.status} />
+                                <StatusBadge status={sub.status} theme={theme} />
                               </div>
                               {sub.feedback && (
                                 <div className={cn(
@@ -531,11 +569,11 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                                 )}>
                                   <div className={cn(
                                     "w-8 h-8 rounded-full border flex items-center justify-center shrink-0",
-                                    theme === 'light' ? "bg-white border-zinc-200" : "bg-zinc-950 border-white/10"
+                                    theme === 'light' ? "bg-white border-zinc-200 shadow-sm" : "bg-zinc-950 border-white/10"
                                   )}>
                                     <MessageSquare className="w-4 h-4 text-emerald-500" />
                                   </div>
-                                  <p className={cn("text-xs font-medium leading-relaxed italic", theme === 'light' ? "text-zinc-600" : "text-zinc-300")}>"{sub.feedback}"</p>
+                                  <p className={cn("text-xs font-medium leading-relaxed italic", theme === 'light' ? "text-zinc-900" : "text-zinc-300")}>"{sub.feedback}"</p>
                                 </div>
                               )}
                             </div>
@@ -552,16 +590,16 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="space-y-8 mt-6"
+                  className="space-y-8 mt-6 pb-20"
                 >
                     <div>
-                    <h2 className="text-2xl font-display font-bold text-white mb-2 tracking-tight">Resources</h2>
-                    <p className="text-zinc-500 text-sm">Auxiliary data for current environment.</p>
+                    <h2 className={cn("text-2xl font-display font-bold mb-2 tracking-tight transition-colors", theme === 'light' ? "text-zinc-950" : "text-white")}>Study Materials</h2>
+                    <p className={cn("text-sm font-medium transition-colors", theme === 'light' ? "text-zinc-800 font-bold" : "text-zinc-500")}>Learning resources shared by your teacher.</p>
                   </div>
                   {resources.length === 0 ? (
-                    <div className="py-20 text-center border-2 border-dashed border-zinc-900 rounded-[3rem]">
-                      <FileText className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-                      <p className="text-xs font-black uppercase tracking-widest text-zinc-700">No data found in cache</p>
+                    <div className={cn("py-20 text-center border-2 border-dashed rounded-[3rem] transition-colors", theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900 border-zinc-800")}>
+                      <FileText className={cn("w-12 h-12 mx-auto mb-4 transition-colors", theme === 'light' ? "text-zinc-300" : "text-zinc-800")} />
+                      <p className={cn("text-[10px] font-black uppercase tracking-widest", theme === 'light' ? "text-zinc-400" : "text-zinc-700")}>No data found in cache</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -571,14 +609,20 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                           href={res.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-5 p-5 rounded-[2.5rem] border border-zinc-900 bg-zinc-900/20 hover:bg-white hover:text-zinc-950 transition-all duration-500 group"
+                          className={cn(
+                            "flex items-center gap-5 p-5 rounded-[2.5rem] border transition-all duration-500 group",
+                            theme === 'light' ? "bg-white border-zinc-200 hover:border-zinc-900 hover:shadow-xl" : "bg-zinc-900 border-zinc-800 hover:bg-white hover:text-zinc-950"
+                          )}
                         >
-                          <div className="w-14 h-14 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-2xl transition-all group-hover:bg-zinc-950 group-hover:text-white">
+                          <div className={cn(
+                            "w-14 h-14 rounded-3xl border flex items-center justify-center shadow-sm transition-all",
+                            theme === 'light' ? "bg-zinc-50 border-zinc-100 group-hover:bg-zinc-950 group-hover:text-white" : "bg-zinc-900 border-zinc-800 group-hover:bg-zinc-950 group-hover:text-white"
+                          )}>
                             <FileText className="w-6 h-6" />
                           </div>
                           <div className="flex-1 overflow-hidden">
-                            <p className="text-base font-bold truncate tracking-tight">{res.name}</p>
-                            <p className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase mt-1 group-hover:text-zinc-400">{res.type.replace('application/', '')}</p>
+                            <p className={cn("text-base font-bold truncate tracking-tight transition-colors", theme === 'light' ? "text-zinc-950" : "text-zinc-100")}>{res.name}</p>
+                            <p className={cn("text-[10px] font-mono tracking-widest uppercase mt-1", theme === 'light' ? "text-zinc-500 group-hover:text-zinc-400" : "text-zinc-500 group-hover:text-zinc-400")}>{res.type.replace('application/', '')}</p>
                           </div>
                           <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-all" />
                         </a>
@@ -604,7 +648,7 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                   <span className={cn(
                     "text-[10px] font-black uppercase tracking-[0.2em]",
                     theme === 'light' ? "text-zinc-600" : "text-zinc-400"
-                  )}>Terminal Sync Active</span>
+                  )}>Live Syncing</span>
                </div>
             </div>
   
@@ -655,11 +699,11 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                     <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/50" />
                     <div className="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500/50" />
                   </div>
-                  <span className={cn("text-[10px] font-black uppercase tracking-[0.3em]", theme === 'light' ? "text-zinc-400" : "text-zinc-600")}>Virtual Terminal Output</span>
+                  <span className={cn("text-[10px] font-black uppercase tracking-[0.3em]", theme === 'light' ? "text-zinc-400" : "text-zinc-600")}>Code Output</span>
                </div>
                {isRunning && (
                  <div className="flex items-center gap-3 text-emerald-500">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Processing Execution</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Running...</span>
                     <div className={cn("h-1 w-20 rounded-full overflow-hidden", theme === 'light' ? "bg-zinc-200" : "bg-zinc-900")}>
                        <motion.div 
                         initial={{ x: '-100%' }}
@@ -680,13 +724,13 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
                   className="space-y-4"
                 >
                   {output ? (
-                    <div className={cn("leading-relaxed break-words whitespace-pre-wrap", theme === 'light' ? "text-zinc-700" : "text-zinc-300")}>
+                    <div className={cn("leading-relaxed break-words whitespace-pre-wrap font-bold", theme === 'light' ? "text-zinc-950" : "text-zinc-300")}>
                        {output}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full opacity-20 py-20">
                        <Monitor className={cn("w-12 h-12 mb-4", theme === 'light' ? "text-zinc-950" : "text-white")} />
-                       <p className={cn("text-xs font-black uppercase tracking-widest leading-none", theme === 'light' ? "text-zinc-950" : "text-white")}>Awaiting input signal</p>
+                       <p className={cn("text-xs font-black uppercase tracking-widest leading-none", theme === 'light' ? "text-zinc-950" : "text-white")}>Run your code to see the output here</p>
                     </div>
                   )}
                 </motion.div>
@@ -699,12 +743,12 @@ export default function StudentClassroom({ classroom }: { classroom: ClassRoom }
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, theme }: { status: string, theme: 'light' | 'vs-dark' }) {
   if (status === 'correct') {
     return <span className="flex items-center text-green-500 text-xs font-bold gap-1"><CheckCircle className="w-3 h-3" /> Correct</span>;
   }
   if (status === 'incorrect') {
     return <span className="flex items-center text-red-500 text-xs font-bold gap-1"><XCircle className="w-3 h-3" /> Re-submit</span>;
   }
-  return <span className="text-zinc-400 text-xs font-bold">Pending</span>;
+  return <span className={cn("text-xs font-bold", theme === 'light' ? "text-zinc-400" : "text-zinc-600")}>Pending</span>;
 }

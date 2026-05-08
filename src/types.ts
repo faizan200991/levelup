@@ -6,7 +6,15 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   photoURL?: string;
+  bio?: string;
+  learningPath?: string;
+  learningPathSubtitle?: string;
+  location?: string;
+  locationSubtitle?: string;
+  classStatus?: string;
+  classStatusSubtitle?: string;
   createdAt: string;
+  lastActive?: string;
 }
 
 export interface ClassRoom {
@@ -54,7 +62,8 @@ export interface Resource {
 }
 
 export interface LiveCode {
-  id: string; // studentId
+  id: string; 
+  studentId: string;
   studentName: string;
   studentPhotoURL?: string;
   code: string;
