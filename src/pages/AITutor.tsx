@@ -50,10 +50,10 @@ export default function AITutor() {
     try {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: [{ parts: [{ text: userMsg }] }],
         config: {
-          systemInstruction: "You are a helpful, expert coding tutor called LEVELUP AI. You help students learn programming (Python, JS, C++, Java). You provide clear explanations, code snippets, and encouragement. Keep responses concise but thorough. Use markdown for code blocks. If you show code, explain it line by line briefly.",
+          systemInstruction: "You are a friendly, encouraging coding mentor for LEVELUP students. Some are very new to coding, so explain things simply and clearly without using too much technical jargon. You help with logic, debugging, and general programming questions. Always be supportive and celebrate their learning journey!",
         }
       });
 
@@ -174,7 +174,7 @@ export default function AITutor() {
           <div className="flex items-center justify-center gap-3 mt-4">
             <div className="h-px bg-zinc-50 flex-1" />
             <p className="text-[9px] text-zinc-300 uppercase font-bold tracking-[0.2em] whitespace-nowrap">
-              Powered by Gemini 3 Flash
+              Powered by Google Gemini
             </p>
             <div className="h-px bg-zinc-50 flex-1" />
           </div>

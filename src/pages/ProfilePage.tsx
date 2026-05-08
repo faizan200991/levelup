@@ -1,0 +1,423 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { useAuth } from '../hooks/useAuth';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { User, Mail, Shield, Calendar, Edit3, Camera, MapPin, Code2, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { UserProfile } from '../types';
+import { cn } from '../lib/utils';
+
+import DashboardLayout from '../components/DashboardLayout';
+
+export default function ProfilePage() {
+  const { uid } = useParams();
+  const { user, profile: currentProfile } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState('');
+  const [bio, setBio] = useState('');
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [learningPath, setLearningPath] = useState('');
+  const [learningPathSubtitle, setLearningPathSubtitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [locationSubtitle, setLocationSubtitle] = useState('');
+  const [classStatus, setClassStatus] = useState('');
+  const [classStatusSubtitle, setClassStatusSubtitle] = useState('');
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const isOwnProfile = user?.uid === uid;
+
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!uid) return;
+      try {
+        const docSnap = await getDoc(doc(db, 'users', uid));
+        if (docSnap.exists()) {
+          const data = docSnap.data() as UserProfile;
+          setProfile(data);
+          setName(data.name);
+          setBio(data.bio || '');
+          setPhotoBase64(data.photoURL || null);
+          setLearningPath(data.learningPath || 'Software Engineer');
+          setLearningPathSubtitle(data.learningPathSubtitle || 'Mastering Web Development & Databases');
+          setLocation(data.location || 'Global Remote');
+          setLocationSubtitle(data.locationSubtitle || 'Learning across borders');
+          setClassStatus(data.classStatus || 'Active Member');
+          setClassStatusSubtitle(data.classStatusSubtitle || 'Engaged in collaborative classrooms');
+        } else {
+          setError('User not found');
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile:', err);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProfile();
+  }, [uid]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 800000) {
+        alert('Image is too large. Please select a file smaller than 800KB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoBase64(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!user || !uid) return;
+    setUpdating(true);
+    try {
+      const updateData: any = {
+        name,
+        bio,
+        photoURL: photoBase64,
+        learningPath,
+        learningPathSubtitle,
+        location,
+        locationSubtitle,
+        classStatus,
+        classStatusSubtitle,
+        lastActive: new Date().toISOString()
+      };
+      
+      await updateDoc(doc(db, 'users', uid), updateData);
+      
+      setProfile({ ...profile!, ...updateData });
+      setEditing(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `users/${uid}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-zinc-200 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-zinc-100 max-w-md">
+          <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner">
+            <User className="w-10 h-10 text-zinc-200" />
+          </div>
+          <h2 className="text-3xl font-display font-bold text-black tracking-tight">{error || 'Profile not found'}</h2>
+          <Button 
+            variant="outline" 
+            className="mt-8 h-14 px-10 rounded-2xl border-zinc-200 text-black font-bold shadow-sm hover:bg-zinc-50"
+            onClick={() => navigate('/dashboard')}
+          >
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Navigation Action Area */}
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(-1)}
+            className="h-12 px-6 rounded-2xl flex items-center gap-3 text-zinc-500 hover:text-zinc-950 hover:bg-white transition-all group"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Return to Protocol</span>
+          </Button>
+          
+          <Link to="/dashboard">
+            <Button 
+              variant="ghost" 
+              className="h-12 px-6 rounded-2xl flex items-center gap-3 text-zinc-500 hover:text-zinc-950 hover:bg-white transition-all group"
+            >
+              <Code2 className="w-5 h-5" /> 
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Command Center</span>
+            </Button>
+          </Link>
+        </div>
+
+        {/* Header/Cover Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-[3rem] shadow-[0_32px_64px_rgba(0,0,0,0.06)] border border-white overflow-hidden"
+        >
+          <div className="h-48 md:h-64 bg-zinc-950 relative overflow-hidden">
+            <div className="absolute inset-0 bg-blue-600/10" />
+            <div className="absolute inset-0 overflow-hidden">
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] opacity-20 blur-[100px] pointer-events-none">
+                  <div className="w-[800px] h-[800px] bg-blue-600 rounded-full animate-pulse absolute top-0 left-0" />
+                  <div className="w-[600px] h-[600px] bg-emerald-500 rounded-full animate-pulse absolute bottom-0 right-0 delay-1000" />
+               </div>
+            </div>
+            
+            {isOwnProfile && (
+              <div className="absolute top-8 right-8 z-20">
+                {!editing ? (
+                  <Button 
+                    className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-xl border border-white/20 h-14 px-8 rounded-2xl flex items-center gap-3 transition-all font-bold"
+                    onClick={() => setEditing(true)}
+                  >
+                    <Edit3 className="w-5 h-5" /> Edit Profile
+                  </Button>
+                ) : (
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline"
+                      className="bg-zinc-950/40 border-white/20 text-white hover:bg-zinc-950/60 h-14 px-8 rounded-2xl font-bold"
+                      onClick={() => {
+                        setEditing(false);
+                        setName(profile.name);
+                        setBio(profile.bio || '');
+                        setPhotoBase64(profile.photoURL || null);
+                        setLearningPath(profile.learningPath || 'Software Engineer');
+                        setLearningPathSubtitle(profile.learningPathSubtitle || '');
+                        setLocation(profile.location || 'Global Remote');
+                        setLocationSubtitle(profile.locationSubtitle || '');
+                        setClassStatus(profile.classStatus || 'Active Member');
+                        setClassStatusSubtitle(profile.classStatusSubtitle || '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-14 px-8 rounded-2xl font-bold shadow-xl shadow-blue-900/20"
+                      onClick={handleUpdate}
+                      isLoading={updating}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="px-8 md:px-16 pb-16 relative">
+            <div className="flex flex-col md:flex-row gap-8 md:gap-12 -mt-20 md:-mt-24">
+              {/* Profile Photo */}
+              <div className="relative group shrink-0">
+                <div className="w-40 h-40 md:w-48 md:h-48 rounded-[3rem] bg-zinc-50 border-8 border-white shadow-2xl overflow-hidden relative">
+                  {photoBase64 ? (
+                    <img src={photoBase64} alt={profile.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-zinc-100">
+                      <User className="w-16 h-16 text-zinc-300" />
+                    </div>
+                  )}
+                  
+                  <AnimatePresence>
+                    {editing && (
+                      <motion.label 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer text-white backdrop-blur-[2px] transition-all hover:bg-black/60"
+                      >
+                        <Camera className="w-8 h-8 mb-2" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Update Photo</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                      </motion.label>
+                    )}
+                  </AnimatePresence>
+                </div>
+                {/* Active Indicator */}
+                <div className="absolute bottom-4 right-4 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full shadow-lg" />
+              </div>
+              
+              {/* Profile Info */}
+              <div className="flex-1 pt-4 md:pt-28">
+                <AnimatePresence mode="wait">
+                  {!editing ? (
+                    <motion.div 
+                      key="view"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <h1 className="text-4xl md:text-5xl font-display font-black text-black tracking-tight leading-none mb-4 uppercase">
+                          {profile.name}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-6">
+                          <div className={cn(
+                            "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-sm",
+                            profile.role === 'teacher' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                          )}>
+                            <Shield className="w-3.5 h-3.5 inline mr-2" /> {profile.role}
+                          </div>
+                          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
+                            <Mail className="w-4 h-4" /> {profile.email}
+                          </div>
+                          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
+                            <Calendar className="w-4 h-4" /> Joined {new Date(profile.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-8 border-t border-zinc-50">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Biography</p>
+                        <p className="text-xl text-black font-medium leading-relaxed max-w-3xl italic">
+                          {profile.bio || "No biography provided yet. This user is focused on excellence in coding."}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="edit"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="space-y-6 pt-4"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Input 
+                          label="Profile Name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Enter your full name"
+                          className="rounded-2xl h-14 text-xl font-bold bg-zinc-50 border-zinc-100"
+                        />
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">Learning Path</label>
+                           <input 
+                             value={learningPath}
+                             onChange={(e) => setLearningPath(e.target.value)}
+                             className="w-full h-14 px-6 rounded-2xl bg-zinc-50 border border-zinc-100 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-bold text-black"
+                             placeholder="e.g. Software Engineer"
+                           />
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">Learning Details</label>
+                          <input 
+                            value={learningPathSubtitle}
+                            onChange={(e) => setLearningPathSubtitle(e.target.value)}
+                            className="w-full h-14 px-6 rounded-2xl bg-zinc-50 border border-zinc-100 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-medium text-black"
+                            placeholder="e.g. Mastering Web Development"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">Location</label>
+                           <input 
+                             value={location}
+                             onChange={(e) => setLocation(e.target.value)}
+                             className="w-full h-14 px-6 rounded-2xl bg-zinc-50 border border-zinc-100 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-bold text-black"
+                             placeholder="e.g. London, UK"
+                           />
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">Location Description</label>
+                          <input 
+                            value={locationSubtitle}
+                            onChange={(e) => setLocationSubtitle(e.target.value)}
+                            className="w-full h-14 px-6 rounded-2xl bg-zinc-50 border border-zinc-100 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-medium text-black"
+                            placeholder="e.g. Remote Student"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">Class Status</label>
+                          <input 
+                            value={classStatus}
+                            onChange={(e) => setClassStatus(e.target.value)}
+                            className="w-full h-14 px-6 rounded-2xl bg-zinc-50 border border-zinc-100 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-bold text-black"
+                            placeholder="e.g. Active Learner"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">Status Description</label>
+                        <input 
+                          value={classStatusSubtitle}
+                          onChange={(e) => setClassStatusSubtitle(e.target.value)}
+                          className="w-full h-14 px-6 rounded-2xl bg-zinc-50 border border-zinc-100 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all font-medium text-black"
+                          placeholder="e.g. Involved in 5 coding projects"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 ml-1">Profile Bio</label>
+                        <textarea 
+                          className="w-full min-h-[160px] p-6 rounded-3xl bg-zinc-50 border border-zinc-100 text-lg font-medium outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none"
+                          placeholder="Tell us about yourself, your goals, or your coding philosophy..."
+                          value={bio}
+                          onChange={(e) => setBio(e.target.value)}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Statistics or Tags Section (Optional Branding) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+           <ProfileStatCard 
+             icon={<Code2 className="w-6 h-6" />}
+             label="Learning Path"
+             value={profile.learningPath || "Software Engineer"}
+             description={profile.learningPathSubtitle || "Mastering Web Development & Databases"}
+           />
+           <ProfileStatCard 
+             icon={<MapPin className="w-6 h-6" />}
+             label="Location"
+             value={profile.location || "Global Remote"}
+             description={profile.locationSubtitle || "Learning across borders"}
+           />
+           <ProfileStatCard 
+             icon={<Calendar className="w-6 h-6" />}
+             label="Class Status"
+             value={profile.classStatus || "Active Member"}
+             description={profile.classStatusSubtitle || "Engaged in collaborative classrooms"}
+           />
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}
+
+function ProfileStatCard({ icon, label, value, description }: { icon: React.ReactNode, label: string, value: string, description: string }) {
+  return (
+    <motion.div 
+      whileHover={{ y: -8 }}
+      className="bg-white p-10 rounded-[3rem] shadow-xl border border-white group"
+    >
+      <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center text-blue-600 mb-8 border border-zinc-100 shadow-inner group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+        {icon}
+      </div>
+      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">{label}</p>
+      <h3 className="text-2xl font-display font-bold text-black tracking-tight mb-3 uppercase">{value}</h3>
+      <p className="text-zinc-500 font-medium text-sm leading-relaxed">{description}</p>
+    </motion.div>
+  );
+}
