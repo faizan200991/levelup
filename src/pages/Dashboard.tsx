@@ -33,6 +33,14 @@ export default function Dashboard() {
   }, [searchParams]);
 
   useEffect(() => {
+    const autoJoinCode = searchParams.get('join');
+    if (autoJoinCode && user && profile?.role === 'student' && !joining) {
+      // Auto-trigger join for students
+      handleJoinClass(new Event('submit') as any);
+    }
+  }, [user, profile, searchParams]);
+
+  useEffect(() => {
     fetchClasses();
   }, [user, profile]);
 
@@ -196,33 +204,33 @@ export default function Dashboard() {
         className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12"
       >
         <div>
-          <h1 className="font-display text-3xl font-bold text-zinc-950 tracking-tighter leading-none">
-            CORE <br />
-            <span className="text-zinc-200 uppercase">Systems.</span>
+          <h1 className="font-display text-3xl font-bold text-black tracking-tighter leading-none">
+            Your <br />
+            <span className="text-blue-600 uppercase">Dashboard.</span>
           </h1>
-          <p className="text-zinc-400 mt-4 text-base font-medium tracking-tight">
-            Node: <span className="text-zinc-950 font-bold">{profile?.name || user?.displayName || 'Technical Operator'}</span>
+          <p className="text-zinc-600 mt-4 text-base font-medium tracking-tight">
+            Welcome back, <span className="text-black font-bold">{profile?.name || user?.displayName || 'Student'}</span>
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
           {profile?.role === 'teacher' ? (
             <Link to="/classroom/create" className="w-full sm:w-auto">
-              <Button size="md" className="w-full sm:w-auto h-12 px-6 rounded-xl bg-zinc-950 hover:bg-zinc-900 shadow-xl shadow-zinc-200 transition-all text-sm font-bold">
-                <Plus className="w-4 h-4 mr-2" /> Initialize Cluster
+              <Button size="md" className="w-full sm:w-auto h-12 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all text-sm font-bold text-white">
+                <Plus className="w-4 h-4 mr-2" /> Create Classroom
               </Button>
             </Link>
           ) : (
             <div className="flex gap-3 p-1.5 bg-white rounded-2xl border border-zinc-100 shadow-xl">
               <form onSubmit={handleJoinClass} className="flex gap-2">
                 <Input 
-                  placeholder="SYNC CODE"
+                  placeholder="JOIN CODE"
                   value={roomCode}
                   onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                   className="w-36 h-12 rounded-xl border-zinc-50 bg-zinc-50/50 font-mono font-black text-center tracking-widest uppercase text-sm"
                   error={error}
                 />
-                <Button type="submit" className="h-12 px-6 rounded-xl bg-zinc-950 shadow-lg text-xs font-black uppercase tracking-widest" isLoading={joining}>Link</Button>
+                <Button type="submit" className="h-12 px-6 rounded-xl bg-blue-600 shadow-lg text-xs font-black uppercase tracking-widest text-white" isLoading={joining}>Join</Button>
               </form>
             </div>
           )}
@@ -232,21 +240,21 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
         <StatCard 
           icon={<BookOpen className="w-5 h-5" />} 
-          label="Active Nodes" 
+          label="Your Classes" 
           value={classes.length < 10 ? `0${classes.length}` : classes.length.toString()} 
-          color="zinc"
+          color="blue"
           delay={0.1}
         />
         <StatCard 
           icon={<Activity className="w-5 h-5" />} 
-          label="Mesh Traffic" 
+          label="Recent Activity" 
           value={activities.length < 10 ? `0${activities.length}` : activities.length.toString()} 
-          color="blue"
+          color="zinc"
           delay={0.2}
         />
         <StatCard 
           icon={<CheckCircle className="w-5 h-5" />} 
-          label="Submissions" 
+          label="Completed Tasks" 
           value={activities.filter(a => a.type === 'submission' && (a.status === 'correct' || a.status === 'completed')).length.toString().padStart(2, '0')} 
           color="green"
           delay={0.3}
@@ -257,7 +265,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-10">
             <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.4em] ml-1">
-               WORKSPACE_CLUSTERS
+               MY_CLASSROOMS
             </h2>
             <div className="w-1/3 h-px bg-zinc-100" />
           </div>
@@ -267,78 +275,77 @@ export default function Dashboard() {
               <div className="bg-white w-24 h-24 rounded-[2rem] shadow-xl border border-zinc-50 flex items-center justify-center mx-auto mb-10">
                 <BookOpen className="w-10 h-10 text-zinc-200" />
               </div>
-              <h3 className="font-display font-bold text-3xl text-zinc-950 tracking-tight">System isolated</h3>
-              <p className="text-zinc-400 mt-4 max-w-sm mx-auto font-medium text-lg leading-relaxed">
+              <h3 className="font-display font-bold text-3xl text-black tracking-tight">No classrooms yet</h3>
+              <p className="text-zinc-600 mt-4 max-w-sm mx-auto font-medium text-lg leading-relaxed">
                 {profile?.role === 'teacher' 
-                  ? "Initialize your first production environment to begin monitoring nodes." 
-                  : "Connect to a workspace using a sync code provided by your technical instructor."}
+                  ? "Create your first classroom to begin inviting students." 
+                  : "Enter a join code shared by your teacher to connect to a classroom."}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              {classes.map((cls, idx) => (
-                <Link key={cls.id} to={`/classroom/${cls.id}`}>
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1 * idx, duration: 0.5 }}
-                    whileHover={{ scale: 1.02, y: -4 }}
-                    className="group bg-white p-8 rounded-3xl border border-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_40px_100px_rgba(0,0,0,0.08)] transition-all duration-700 relative overflow-hidden h-full flex flex-col"
-                  >
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.1] transition-all duration-1000 group-hover:scale-125 group-hover:-rotate-6">
-                      {(cls as any).language ? (
-                        <img 
-                          src={getLanguageIcon((cls as any).language)} 
-                          alt="" 
-                          className="w-40 h-40 grayscale group-hover:grayscale-0 transition-all duration-700" 
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <BookOpen className="w-32 h-32 text-zinc-950" />
-                      )}
-                    </div>
-                    
-                    <div className="flex justify-between items-start mb-10 relative z-10">
-                      <div className={cn(
-                        "w-12 h-12 rounded-xl bg-white shadow-2xl flex items-center justify-center transition-all duration-700 group-hover:rotate-12 border border-zinc-100 p-2",
-                      )}>
-                        {(cls as any).language ? (
-                          <img 
-                            src={getLanguageIcon((cls as any).language)} 
-                            alt="" 
-                            className="w-full h-full object-contain"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <BookOpen className="w-5 h-5 text-zinc-400" />
-                        )}
+            <div className="space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                {classes.slice(0, 4).map((cls, idx) => (
+                  <Link key={cls.id} to={`/classroom/${cls.id}`}>
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 * idx, duration: 0.5 }}
+                      className="group bg-white p-8 rounded-3xl border border-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-all duration-300 relative overflow-hidden h-full flex flex-col"
+                    >
+                      {/* Class content same as before ... */}
+                      <div className="flex justify-between items-start mb-10 relative z-10">
+                        <div className={cn(
+                          "w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-zinc-100 p-2",
+                        )}>
+                          {(cls as any).language ? (
+                            <img 
+                              src={getLanguageIcon((cls as any).language)} 
+                              alt="" 
+                              className="w-full h-full object-contain"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <BookOpen className="w-5 h-5 text-zinc-400" />
+                          )}
+                        </div>
+                        <div className="px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-100">
+                           <span className="text-[9px] font-mono font-black text-zinc-700 uppercase tracking-[0.2em]">
+                             {cls.roomCode}
+                           </span>
+                        </div>
                       </div>
-                      <div className="px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                         <span className="text-[9px] font-mono font-black text-zinc-400 uppercase tracking-[0.2em]">
-                           {cls.roomCode}
-                         </span>
+                      
+                      <div className="mt-auto relative z-10">
+                        <h3 className="font-display font-bold text-2xl text-black tracking-tighter mb-4 leading-none">
+                          {cls.className}
+                        </h3>
+                        <div className="flex items-center gap-4 text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                          <span>ACTIVE // JOINED {new Date(cls.createdAt).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="mt-auto relative z-10">
-                      <h3 className="font-display font-bold text-2xl text-zinc-950 tracking-tighter mb-4 leading-none group-hover:text-zinc-800 transition-colors">
-                        {cls.className}
-                      </h3>
-                      <div className="flex items-center gap-4 text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                        <span>ACTIVE NODE // {new Date(cls.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
 
-                    <div className="mt-8 pt-6 border-t border-zinc-50 flex items-center justify-between relative z-10">
-                       <span className="text-zinc-950 font-bold text-sm">Open Cluster</span>
-                       <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center group-hover:bg-zinc-950 group-hover:text-white transition-all duration-500 shadow-sm">
-                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                       </div>
-                    </div>
-                  </motion.div>
-                </Link>
-              ))}
+                       <div className="mt-8 pt-6 border-t border-zinc-50 flex items-center justify-between relative z-10">
+                         <span className="text-black font-bold text-sm">Open Classroom</span>
+                         <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center shadow-sm text-zinc-400">
+                           <ArrowRight className="w-4 h-4" />
+                         </div>
+                      </div>
+                    </motion.div>
+                  </Link>
+                ))}
+              </div>
+              
+              {classes.length > 4 && (
+                <div className="flex justify-center">
+                  <Link to="/classrooms">
+                    <Button variant="outline" className="h-14 px-10 rounded-2xl border-zinc-200 text-black font-bold text-sm shadow-sm hover:bg-zinc-50 transition-all">
+                      View All Classrooms <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -346,18 +353,18 @@ export default function Dashboard() {
         <div className="space-y-12">
           <div>
             <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-10 ml-1">
-               LIVE_DATA_STREAM
+               RECENT_UPDATES
             </h2>
             
             <div className="bg-white rounded-[3.5rem] border border-zinc-100 overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.04)] relative">
-              <div className="absolute top-0 left-0 w-full h-1 bg-zinc-950 z-10" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 z-10" />
               
               {activities.length === 0 ? (
                 <div className="p-20 text-center">
                   <div className="bg-zinc-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-8">
                     <Activity className="w-10 h-10 text-zinc-100" />
                   </div>
-                  <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em]">No incoming bits</p>
+                  <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em]">No updates yet</p>
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-50">
@@ -370,7 +377,7 @@ export default function Dashboard() {
                     >
                       <Link 
                         to={`/classroom/${act.classId}`}
-                        className="block p-8 hover:bg-zinc-50/70 transition-all duration-500 group"
+                        className="block p-8 hover:bg-blue-50/10 transition-all duration-500 group"
                       >
                         <div className="flex gap-6">
                           <div className={cn(
@@ -400,7 +407,7 @@ export default function Dashboard() {
                                  {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                </span>
                             </div>
-                            <h4 className="text-base font-bold text-zinc-950 truncate tracking-tight group-hover:text-zinc-800 transition-colors">
+                            <h4 className="text-base font-bold text-black truncate tracking-tight group-hover:text-blue-600 transition-colors">
                               {act.title}
                             </h4>
                             <div className="flex items-center gap-3 mt-3">
@@ -424,18 +431,19 @@ export default function Dashboard() {
               )}
             </div>
             
-            <div className="mt-10 p-10 bg-zinc-950 rounded-[3.5rem] border border-zinc-900 shadow-2xl relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000" />
-               <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-4">SYSTEM_ENVELOPE</h4>
-               <p className="text-white text-sm font-medium leading-relaxed">LevelUp Mesh Network is active. Encrypted packet transmission is stable at 0.04ms average latency.</p>
+            <div className="mt-10 p-10 bg-blue-600 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000" />
+               <h4 className="text-[10px] font-black text-white/60 uppercase tracking-[0.4em] mb-4">WELCOME TO LEVELUP</h4>
+               <p className="text-white text-sm font-medium leading-relaxed">We're glad to have you here! Use your dashboard to stay updated on your classes and new programming projects.</p>
                <div className="mt-8 flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Protocol [LUP-X4] ONLINE</span>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Everything is running smoothly</span>
                </div>
             </div>
           </div>
         </div>
       </div>
+
     </DashboardLayout>
   );
 }
@@ -458,8 +466,8 @@ function StatCard({ icon, label, value, color, delay = 0 }: { icon: React.ReactN
         {icon}
       </div>
       <div>
-        <p className="text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em]">{label}</p>
-        <p className="text-xl font-display font-bold text-zinc-900 mt-0.5 tracking-tight">{value}</p>
+        <p className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em]">{label}</p>
+        <p className="text-xl font-display font-bold text-black mt-0.5 tracking-tight">{value}</p>
       </div>
     </motion.div>
   );
