@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -12,12 +12,101 @@ import {
   MessageSquare, 
   Star,
   Plus,
-  FileText
+  FileText,
+  ChevronDown,
+  CheckCircle2,
+  Clock,
+  MessageCircle,
+  Code
 } from 'lucide-react';
+
+const SLIDE_IMAGES = [
+  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=2000",
+  "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=2000",
+  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=2000"
+];
+
+function HeroCard() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % SLIDE_IMAGES.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="relative w-full h-screen overflow-hidden group bg-zinc-900">
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0 w-full h-full"
+        >
+          <img
+            src={SLIDE_IMAGES[index]}
+            className="w-full h-full object-cover brightness-[0.7]"
+            referrerPolicy="no-referrer"
+            alt="Collaborative Learning"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+        </motion.div>
+      </AnimatePresence>
+      
+      <div className="absolute inset-0 flex items-center justify-center p-10 md:p-16 z-10">
+        <div className="max-w-4xl text-center">
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="flex flex-col items-center space-y-6"
+          >
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-blue-600 text-white text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-600/20">
+              <Zap className="w-3.5 h-3.5 fill-current" /> Next-Gen Learning
+            </div>
+            <h1 className="text-white text-4xl md:text-8xl font-bold tracking-tight leading-[0.95]">
+              Interactive Classroom <br />
+              <span className="text-blue-500">Experience</span>
+            </h1>
+            <p className="text-zinc-300 text-sm md:text-xl font-medium leading-relaxed max-w-2xl px-4 md:px-0">
+              Master modern software engineering with real-time feedback from high-performance mentors.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 justify-center w-full max-w-sm sm:max-w-none">
+              <Link to="/register" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-blue-600 hover:bg-zinc-100 hover:text-blue-600 text-white h-12 md:h-16 px-8 md:px-10 rounded-2xl text-sm md:text-lg font-bold shadow-xl border-none transition-all duration-300">
+                  Get Started Free
+                </Button>
+              </Link>
+              <Link to="/login" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-white hover:bg-zinc-100 text-zinc-900 h-12 md:h-16 px-8 md:px-10 rounded-2xl text-sm md:text-lg font-bold border-none transition-all shadow-xl">
+                  Sign In
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="absolute bottom-10 right-10 flex gap-1.5 z-20">
+        {SLIDE_IMAGES.map((_, i) => (
+          <div 
+            key={i} 
+            className={`h-1 rounded-full transition-all duration-1000 ${i === index ? 'w-10 bg-blue-500' : 'w-2 bg-white/20'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white overflow-hidden selection:bg-zinc-900 selection:text-white">
+    <div className="min-h-screen bg-white selection:bg-zinc-900 selection:text-white">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/50 backdrop-blur-2xl border-b border-zinc-100">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -25,205 +114,63 @@ export default function LandingPage() {
             <div className="bg-zinc-950 p-1.5 rounded-xl shadow-xl shadow-zinc-200">
               <Code2 className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display font-bold text-xl tracking-tighter text-zinc-950 uppercase">LEVEL<span className="text-zinc-400">UP</span></span>
+            <span className="font-display font-bold text-xl tracking-tighter text-black uppercase">LEVELUP</span>
           </div>
-          <div className="flex items-center gap-8">
-            <Link to="/login" className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-950 transition-all">Sign In</Link>
+          <div className="flex items-center gap-4">
+            <Link to="/login" className="bg-white text-black px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-zinc-200 shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.1)] hover:bg-white transition-all transform hover:-translate-y-0.5">Sign In</Link>
             <Link to="/register">
-              <Button size="sm" className="rounded-xl px-6 h-10 shadow-xl shadow-zinc-100 font-bold">Get Started</Button>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 h-10 shadow-lg shadow-blue-100 font-bold border-none transition-all hover:scale-105">Get Started</Button>
             </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-40 pb-20 px-6 relative">
-        <div className="absolute top-0 right-0 w-[60vw] h-[60vw] bg-zinc-50 rounded-full blur-[150px] -mr-[20vw] -mt-[20vw] -z-10 opacity-50" />
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-zinc-950 text-white text-[10px] font-black uppercase tracking-[0.4em] mb-12 shadow-2xl shadow-zinc-200">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]" /> THE NEW CODE STANDARD
-            </div>
-            <h1 className="font-display text-6xl md:text-8xl font-bold tracking-tighter text-zinc-950 leading-[0.8] mb-10">
-              SYNCHRONIZE<br />
-              <span className="text-zinc-400">YOUR</span> <br />
-              GENIUS.
-            </h1>
-            <p className="text-xl text-zinc-600 leading-relaxed max-w-md mb-12 font-medium tracking-tight">
-              The industry-standard synchronization layer for elite technical education. Broadcast logic, monitor terminal nodes, and scale engineer production in real-time.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 items-center">
-              <Link to="/register" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto h-14 px-10 rounded-2xl text-base font-bold bg-zinc-950 hover:bg-zinc-900 shadow-2xl shadow-zinc-200 group transition-all">
-                  Initialize Network <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
-            whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-            className="perspective-2000 relative group"
-          >
-            <div className="relative rounded-[5rem] overflow-hidden shadow-[0_100px_200px_rgba(0,0,0,0.2)] border border-zinc-100 p-8 bg-white/90 backdrop-blur-3xl transform-gpu transition-all duration-1000 group-hover:rotate-1 group-hover:-translate-y-4">
-               <div className="h-12 px-8 flex items-center justify-between border-b border-zinc-50 mb-8 font-mono text-[10px] text-zinc-400 uppercase tracking-widest font-black">
-                  <span>mission_control.sync [v2.4.0]</span>
-                  <div className="flex gap-2">
-                     <div className="w-2.5 h-2.5 rounded-full bg-red-400/20" />
-                     <div className="w-2.5 h-2.5 rounded-full bg-amber-400/20" />
-                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-400/20" />
-                  </div>
-               </div>
-               
-               <div className="rounded-[4rem] overflow-hidden bg-[#0d0d0d] p-1.5 relative group-hover:shadow-[0_0_120px_rgba(0,0,0,0.1)] transition-all">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(50,50,50,0.1)_0%,transparent_50%)]" />
-                
-                <div className="h-[400px] font-mono p-12 overflow-hidden relative">
-                   <div className="space-y-4">
-                      <div className="flex gap-4">
-                        <span className="text-zinc-800">01</span>
-                        <span className="text-emerald-500">import</span>
-                        <span className="text-white">{"{ MeshSync }"}</span>
-                        <span className="text-emerald-500">from</span>
-                        <span className="text-amber-500">'@levelup/core'</span>;
-                      </div>
-                      <div className="flex gap-4">
-                        <span className="text-zinc-800">02</span>
-                        <span className="text-zinc-500">{"// Initialize node broadcast"}</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <span className="text-zinc-800">03</span>
-                        <span className="text-emerald-500">const</span>
-                        <span className="text-blue-400">node</span>
-                        <span className="text-white">=</span>
-                        <span className="text-emerald-500">new</span>
-                        <span className="text-white">MeshSync();</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <span className="text-zinc-800">04</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <span className="text-zinc-800">05</span>
-                        <span className="text-blue-400">node</span>.
-                        <span className="text-white">broadcast((</span>
-                        <span className="text-amber-400">signal</span>
-                        <span className="text-white">) ={">"} {"{"}</span>
-                      </div>
-                      <div className="flex gap-4 pl-8">
-                        <span className="text-zinc-800">06</span>
-                        <span className="text-emerald-500">return</span>
-                        <span className="text-amber-400">signal</span>.
-                        <span className="text-white">optimize();</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <span className="text-zinc-800">07</span>
-                        <span className="text-white">{"});"}</span>
-                      </div>
-                   </div>
-
-                   {/* Floating Metrics */}
-                   <div className="absolute top-12 right-12 space-y-3">
-                      {[1, 2, 3, 4].map(i => (
-                        <motion.div 
-                          key={i}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.2 }}
-                          className="px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-[8px] font-black uppercase text-zinc-400 tracking-[0.2em]"
-                        >
-                          Node_{i * 255}_Active
-                        </motion.div>
-                      ))}
-                   </div>
-                </div>
-                
-                <div className="absolute inset-0 p-16 flex flex-col pointer-events-none">
-                   <div className="mt-auto">
-                      <motion.div 
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ duration: 0.8, delay: 0.5 }}
-                        className="bg-white/10 backdrop-blur-3xl border border-white/20 rounded-3xl p-8 shadow-3xl"
-                      >
-                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-6">
-                              <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-zinc-950 shadow-[0_0_40px_rgba(16,185,129,0.4)]">
-                                 <Zap className="w-7 h-7 fill-zinc-950" />
-                              </div>
-                              <div>
-                                 <p className="text-[9px] font-black text-white uppercase tracking-[0.2em] leading-none mb-2">Live Sync Protocol</p>
-                                 <p className="text-lg font-bold text-emerald-400">Grid Connectivity: 100%</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                               <p className="text-[10px] font-mono text-zinc-300 uppercase">Latency</p>
-                               <p className="text-xl font-bold font-mono text-white">4ms</p>
-                            </div>
-                         </div>
-                      </motion.div>
-                   </div>
-                </div>
-               </div>
-            </div>
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-zinc-100 rounded-full mix-blend-multiply blur-3xl opacity-50 animate-pulse" />
-            <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-blue-50 rounded-full mix-blend-multiply blur-3xl opacity-50" />
-          </motion.div>
-        </div>
+      <section className="h-screen w-full">
+        <HeroCard />
       </section>
 
-      {/* Real-time Flow Section */}
-      <section className="py-48 px-6 bg-zinc-950">
+      {/* Simplified Steps Section */}
+      <section id="features" className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-32">
-            <h2 className="font-display text-5xl md:text-7xl font-bold tracking-tighter text-white mb-8">
-              THE <span className="text-zinc-700">FLOW</span> OF CODE.
+          <div className="text-center mb-24">
+            <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 mb-6">
+              Empowering Teachers and Students
             </h2>
-            <p className="text-zinc-400 max-w-xl mx-auto text-lg font-medium">A seamless, bi-directional transmission layer that keeps teachers and students in perfect synchronization.</p>
+            <p className="text-zinc-500 max-w-xl mx-auto text-lg font-medium">A friendly classroom experience designed for learning, not just coding.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                step: "01",
-                title: "Broadcast",
-                desc: "Teachers push problems and resources to the mesh. Instant deployment across all student nodes.",
-                image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=800"
+                icon: <MessageSquare className="w-6 h-6 text-blue-600" />,
+                title: "Live Communication",
+                desc: "Ask questions and get help instantly through our built-in classroom chat and AI tutor."
               },
               {
-                step: "02",
-                title: "Observe",
-                desc: "Monitor student logic in real-time. Catch errors before they become habits with terminal sync.",
-                image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800"
+                icon: <Users className="w-6 h-6 text-cyan-600" />,
+                title: "Work Together",
+                desc: "Follow your teacher's logic in real-time or collaborate with peers on group challenges."
               },
               {
-                step: "03",
-                title: "Optimize",
-                desc: "Instant feedback loop. Grade, comment, and iterate with AI-assisted mentoring tools.",
-                image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=800"
+                icon: <Monitor className="w-6 h-6 text-amber-600" />,
+                title: "Guided Learning",
+                desc: "Step-by-step tracks and interactive exercises built to take you from beginner to pro."
               }
-            ].map((node, i) => (
+            ].map((feature, i) => (
               <motion.div 
                 key={i}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.2 }}
-                className="group p-10 rounded-[3rem] bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all duration-500 overflow-hidden"
+                transition={{ delay: i * 0.1 }}
+                className="p-8 rounded-3xl bg-zinc-50 border border-zinc-100 hover:bg-white hover:shadow-xl transition-all duration-300"
               >
-                <div className="text-5xl font-display font-black text-white/5 mb-8 group-hover:text-white/10 transition-colors uppercase tracking-widest">{node.step}</div>
-                <div className="aspect-video rounded-3xl overflow-hidden mb-10 border border-white/5 grayscale group-hover:grayscale-0 transition-all duration-700">
-                  <img src={node.image} alt={node.title} className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-[2s]" referrerPolicy="no-referrer" />
+                <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-100 flex items-center justify-center mb-6 shadow-sm">
+                  {feature.icon}
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">{node.title}</h3>
-                <p className="text-zinc-400 leading-relaxed font-medium">{node.desc}</p>
+                <h3 className="text-xl font-bold text-zinc-900 mb-3 tracking-tight">{feature.title}</h3>
+                <p className="text-zinc-500 leading-relaxed text-sm font-medium">{feature.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -231,100 +178,93 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-48 px-10 bg-zinc-50/50">
+      <section className="py-24 px-10 bg-zinc-50/50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-32">
-             <h2 className="font-display text-5xl font-bold tracking-tighter text-zinc-950 mb-6">TRUSTED BY <span className="text-zinc-400">EXPERTS.</span></h2>
-             <p className="text-zinc-600 max-w-lg mx-auto font-medium">Leading technical directors and educators rely on LEVELUP for secure, scaleable training.</p>
+          <div className="text-center mb-24">
+             <h2 className="font-display text-4xl font-bold tracking-tight text-zinc-950 mb-4">Loved by Students & Teachers</h2>
+             <p className="text-zinc-500 max-w-md mx-auto font-medium">Join thousands of learners making progress every single day.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <TestimonialCard 
-              name="Dr. Aris Thorne"
-              role="Head of CS, Standard"
-              content="The latency profile is unlike anything we've seen. It feels like teaching in the same room even across oceans."
-              avatar="1"
+              name="Prof. Aris Thorne"
+              role="University Instructor"
+              content="This platform changed how I teach remotely. My students feel more engaged and less overwhelmed by the tech."
+              avatar="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=400"
             />
             <TestimonialCard 
               name="Sarah Jenkins"
-              role="CTO, Tech Academy"
-              content="Security was our main blocker. LevelUp's encrypted vault solved it overnight. Professional and performant."
-              avatar="2"
+              role="CS Student"
+              content="The real-time collaboration makes group projects so much fun. I can finally see what my partner is doing!"
+              avatar="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=400"
             />
             <TestimonialCard 
               name="Marcus V."
-              role="Product Lead, DevCorp"
-              content="Training junior engineers has become 4x more efficient. The mesh chat allows for instant intervention."
-              avatar="3"
+              role="Head of Education"
+              content="A clean, professional tool that actually speaks the language of education. Reliable and easy to set up."
+              avatar="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400"
             />
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-48 px-10 bg-white">
-        <div className="max-w-7xl mx-auto rounded-[6rem] bg-zinc-950 p-24 md:p-48 text-center relative overflow-hidden shadow-[0_50px_200px_rgba(0,0,0,0.4)] group">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.15)_0%,transparent_60%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+      <section className="py-24 px-10 bg-white">
+        <div className="max-w-5xl mx-auto rounded-[3.5rem] bg-[#0A0C10] p-16 md:p-20 text-center relative overflow-hidden shadow-2xl group border border-white/5">
+          {/* Background Photo Overlay */}
+          <div className="absolute inset-0 z-0">
+            <img 
+              src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=2000" 
+              alt="Coding Background" 
+              className="w-full h-full object-cover opacity-20 brightness-75 mix-blend-luminosity scale-110 group-hover:scale-100 transition-transform duration-[4000ms]"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-transparent to-cyan-400/20" />
+          </div>
+
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
           
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
             className="relative z-10"
           >
-            <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tighter text-white mb-10 leading-[0.85]">
-              UPGRADE <br />
-              <span className="text-zinc-700 group-hover:text-zinc-600 transition-colors duration-1000">YOUR SPECS.</span>
+            <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight text-white mb-10">
+              Start Your Coding <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Journey Today.</span>
             </h2>
             <Link to="/register">
-              <Button size="lg" className="bg-white text-zinc-950 hover:bg-zinc-100 h-16 px-12 rounded-2xl text-xl font-bold shadow-2xl transition-all hover:scale-110 active:scale-95 duration-500">
-                Initialize System
+              <Button size="lg" className="bg-white text-[#0A0C10] hover:bg-zinc-100 h-16 px-12 rounded-2xl text-xl font-bold shadow-xl transition-all hover:scale-105 active:scale-95 border-none">
+                Join the Classroom
               </Button>
             </Link>
-            <p className="mt-12 text-zinc-500 font-black uppercase tracking-[0.4em] text-[10px]">VER_09.22.42-STABLE</p>
+            <p className="mt-8 text-zinc-500 font-bold uppercase tracking-widest text-[10px] opacity-80">Free for individual students and teachers</p>
           </motion.div>
         </div>
       </section>
 
-      <footer className="py-24 border-t border-zinc-100 px-10">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-          <div>
-            <div className="flex items-center gap-4 mb-8">
-              <div className="bg-zinc-950 p-1.5 rounded-xl">
-                <Code2 className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-display font-bold text-2xl tracking-tighter uppercase">LEVEL<span className="text-zinc-400">UP</span></span>
+
+      <footer className="py-12 bg-zinc-950 text-zinc-400 border-t border-zinc-900 px-10">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-600 p-2 rounded-xl">
+              <Code2 className="w-5 h-5 text-white" />
             </div>
-            <p className="text-zinc-500 font-medium text-sm max-w-xs">Accelerating the transition to technical excellence across the global education stack.</p>
+            <span className="font-display font-bold text-xl tracking-tighter uppercase text-white">LEVELUP</span>
           </div>
-          <div className="flex flex-wrap gap-20 md:justify-end">
-            <div>
-              <p className="text-[10px] font-black text-zinc-950 uppercase tracking-[0.3em] mb-6">Network</p>
-              <ul className="space-y-3 text-sm font-bold text-zinc-500">
-                <li><a href="#" className="hover:text-zinc-950 transition-colors">Nodes</a></li>
-                <li><a href="#" className="hover:text-zinc-950 transition-colors">Clusters</a></li>
-                <li><a href="#" className="hover:text-zinc-950 transition-colors">Uptime</a></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-zinc-950 uppercase tracking-[0.3em] mb-6">Legal</p>
-              <ul className="space-y-3 text-sm font-bold text-zinc-500">
-                <li><a href="#" className="hover:text-zinc-950 transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-zinc-950 transition-colors">Terms</a></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-zinc-950 uppercase tracking-[0.3em] mb-6">Social</p>
-              <ul className="space-y-3 text-sm font-bold text-zinc-500">
-                <li><a href="#" className="hover:text-zinc-950 transition-colors">X / Twitter</a></li>
-                <li><a href="#" className="hover:text-zinc-950 transition-colors">GitHub</a></li>
-              </ul>
-            </div>
+          
+          <div className="flex flex-wrap gap-8 justify-center">
+            <a href="#" className="text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">Nodes</a>
+            <a href="#" className="text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">Uptime</a>
+            <a href="#" className="text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">Privacy</a>
+            <a href="#" className="text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">Terms</a>
+            <a href="#" className="text-xs font-bold uppercase tracking-widest hover:text-white transition-colors">GitHub</a>
           </div>
-        </div>
-        <div className="max-w-7xl mx-auto mt-20 pt-10 border-t border-zinc-100 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">
-          © 2026 LEVELUP SYSTEMS INC // ALL RIGHTS RESERVED
+
+          <div className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">
+            © 2026 LEVELUP SYSTEMS INC
+          </div>
         </div>
       </footer>
     </div>
@@ -334,13 +274,13 @@ export default function LandingPage() {
 function TestimonialCard({ name, role, content, avatar }: { name: string, role: string, content: string, avatar: string }) {
   return (
     <div className="p-12 rounded-[3.5rem] bg-white border border-zinc-100 shadow-sm hover:shadow-2xl transition-all duration-700 group">
-      <div className="flex gap-1 mb-10">
-        {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-5 h-5 fill-zinc-900 text-zinc-900" />)}
+      <div className="flex gap-1.5 mb-10">
+        {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />)}
       </div>
-      <p className="text-zinc-600 mb-10 leading-relaxed font-medium text-lg">"{content}"</p>
+      <p className="text-zinc-600 mb-10 leading-relaxed font-medium text-lg italic">"{content}"</p>
       <div className="flex items-center gap-6">
         <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden bg-zinc-50 border border-zinc-100 group-hover:rotate-6 transition-transform duration-500">
-          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${avatar}`} alt={name} referrerPolicy="no-referrer" />
+          <img src={avatar} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         </div>
         <div>
           <h4 className="font-bold text-zinc-950 text-xl">{name}</h4>

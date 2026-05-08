@@ -49,25 +49,47 @@ service cloud.firestore {
     // COLLECTIONS
     // ---------------------------------------------------------
 
+    match /test/connection {
+      allow read: if true;
+    }
+
     // 1. Users
     match /users/{userId} {
       function isValidUser(data) {
-        return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-               data.email is string && data.email.size() > 0 && data.email.size() <= 256 &&
-               data.role in ['teacher', 'student'] &&
-               data.createdAt is string &&
-               (data.get('photoURL', null) == null || data.photoURL is string);
+        let name = data.get('name', '');
+        let role = data.get('role', 'student');
+        let email = data.get('email', '');
+        let createdAt = data.get('createdAt', '');
+        
+        return (name is string && name.size() <= 128) &&
+               (role in ['teacher', 'student']) &&
+               (email is string) &&
+               (createdAt is string) &&
+               (data.get('photoURL', '') is string || data.get('photoURL', null) == null) &&
+               (data.get('bio', '') is string || data.get('bio', null) == null) &&
+               (data.get('learningPath', '') is string || data.get('learningPath', null) == null) &&
+               (data.get('learningPathSubtitle', '') is string || data.get('learningPathSubtitle', null) == null) &&
+               (data.get('location', '') is string || data.get('location', null) == null) &&
+               (data.get('locationSubtitle', '') is string || data.get('locationSubtitle', null) == null) &&
+               (data.get('classStatus', '') is string || data.get('classStatus', null) == null) &&
+               (data.get('classStatusSubtitle', '') is string || data.get('classStatusSubtitle', null) == null) &&
+               (data.get('lastActive', '') is string || data.get('lastActive', null) == null);
       }
 
-      allow get: if isSignedIn(); // Allow reading profile info (name, photo) for sync
-      allow list: if false; // No searching users
+      allow get: if isSignedIn(); 
+      allow list: if false; 
       
       allow create: if isOwner(userId) && isValidUser(incoming());
       
       allow update: if isOwner(userId) && isValidUser(incoming()) &&
-                    incoming().role == existing().role && // Protect role escalation
-                    incoming().email == existing().email &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'createdAt', 'photoURL']);
+                    incoming().get('role', 'student') == existing().get('role', 'student') && 
+                    incoming().get('email', '') == existing().get('email', '') &&
+                    incoming().diff(existing()).affectedKeys().hasOnly([
+                      'name', 'photoURL', 'lastActive', 'bio', 
+                      'learningPath', 'learningPathSubtitle', 
+                      'location', 'locationSubtitle', 
+                      'classStatus', 'classStatusSubtitle'
+                    ]);
     }
 
     // 2. Classes

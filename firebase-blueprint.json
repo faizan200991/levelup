@@ -9,6 +9,13 @@
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string", "enum": ["teacher", "student"] },
         "photoURL": { "type": "string", "format": "uri" },
+        "bio": { "type": "string" },
+        "learningPath": { "type": "string" },
+        "learningPathSubtitle": { "type": "string" },
+        "location": { "type": "string" },
+        "locationSubtitle": { "type": "string" },
+        "classStatus": { "type": "string" },
+        "classStatusSubtitle": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "email", "role", "createdAt"]
