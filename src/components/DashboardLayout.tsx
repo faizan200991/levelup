@@ -5,32 +5,40 @@ import { cn } from '../lib/utils';
 
 interface LayoutProps {
   children: React.ReactNode;
+  theme?: 'light' | 'vs-dark';
 }
 
-export default function DashboardLayout({ children }: LayoutProps) {
+export default function DashboardLayout({ children, theme = 'light' }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
+    <div className={cn(
+      "min-h-screen flex flex-col lg:flex-row transition-colors duration-500",
+      theme === 'light' ? "bg-white text-zinc-950" : "bg-zinc-950 text-zinc-100"
+    )}>
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+        theme={theme}
       />
       
       {/* Mobile Header */}
-      <header className="lg:hidden h-16 bg-zinc-900 border-b border-zinc-800 px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+      <header className={cn(
+        "lg:hidden h-16 border-b px-6 flex items-center justify-between sticky top-0 z-30 shrink-0",
+        "bg-zinc-950 border-zinc-900"
+      )}>
         <div className="flex items-center gap-2">
-          <div className="bg-white p-1 rounded shadow-sm">
-            <Code2 className="w-5 h-5 text-zinc-900" />
+          <div className="bg-white p-1 rounded shadow-sm text-zinc-950">
+            <Code2 className="w-5 h-5" />
           </div>
-          <span className="font-display font-bold text-white tracking-tight text-lg">LEVELUP</span>
+          <span className="font-display font-bold tracking-tight text-lg text-white">LEVELUP</span>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(true)}
-          className="p-2 text-zinc-400 hover:text-white"
+          className="p-2 transition-colors text-zinc-400 hover:text-white"
         >
           <Menu className="w-6 h-6" />
         </button>
