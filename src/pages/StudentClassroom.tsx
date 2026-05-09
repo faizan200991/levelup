@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Editor } from '@monaco-editor/react';
-import { collection, onSnapshot, doc, setDoc, addDoc, query, orderBy, where, getDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { ClassRoom, Problem, Submission, Resource, UserProfile } from '../types';
 import { Button } from '../components/Button';
-import { Badge } from '../components/Badge';
 import { Link } from 'react-router-dom';
 import { cn, getLanguageIcon } from '../lib/utils';
 import { 
   Play, 
-  Send, 
   ChevronRight, 
   MessageSquare, 
   CheckCircle, 
@@ -18,12 +15,11 @@ import {
   FileText, 
   Sparkles,
   ExternalLink,
-  Code,
   Monitor,
   Sun,
   Moon,
-  Zap,
-  User as UserIcon
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -40,7 +36,7 @@ export default function StudentClassroom({
   theme: 'vs-dark' | 'light',
   setTheme: (t: 'vs-dark' | 'light') => void 
 }) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
   const [code, setCode] = useState('');
@@ -50,16 +46,32 @@ export default function StudentClassroom({
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [activePanel, setActivePanel] = useState<'problem' | 'resources'>('problem');
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [teacherProfile, setTeacherProfile] = useState<UserProfile | null>(null);
   
   const lastSyncRef = useRef<number>(0);
 
+  const getDefaultCode = (lang: string) => {
+    switch (lang) {
+      case 'python': return 'print("Hello, World!")';
+      case 'javascript': return 'console.log("Hello, World!");';
+      case 'java': return 'public class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello, World!");\n  }\n}';
+      case 'cpp': return '#include <iostream>\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n  return 0;\n}';
+      default: return '';
+    }
+  };
+
   useEffect(() => {
     const fetchTeacher = async () => {
       try {
-        const teacherDoc = await getDoc(doc(db, 'users', classroom.teacherId));
-        if (teacherDoc.exists()) {
-          setTeacherProfile({ uid: teacherDoc.id, ...teacherDoc.data() } as UserProfile);
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', classroom.teacherId)
+          .single();
+        
+        if (data) {
+          setTeacherProfile({ uid: data.id, ...data } as UserProfile);
         }
       } catch (err) {
         console.error('Error fetching teacher profile:', err);
@@ -69,56 +81,101 @@ export default function StudentClassroom({
   }, [classroom.teacherId]);
 
   useEffect(() => {
-    // Fetch problems
-    const unsubProblems = onSnapshot(
-      query(collection(db, 'classes', classroom.id, 'problems'), orderBy('createdAt', 'desc')),
-      (snap) => {
-        const probs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Problem));
+    // Initial fetch and subscription for problems
+    const fetchProblems = async () => {
+      const { data } = await supabase
+        .from('problems')
+        .select('*')
+        .eq('classroom_id', classroom.id)
+        .order('created_at', { ascending: false });
+      
+      if (data) {
+        const probs = data as unknown as Problem[];
         setProblems(probs);
         if (probs.length > 0 && !selectedProblem) {
           setSelectedProblem(probs[0]);
-          setCode(getDefaultCode(probs[0].language));
+          setCode(probs[0].starterCode || getDefaultCode(probs[0].language));
         }
-      },
-      (error) => handleFirestoreError(error, OperationType.LIST, `classes/${classroom.id}/problems`)
-    );
+      }
+    };
 
-    const unsubResources = onSnapshot(
-      query(collection(db, 'classes', classroom.id, 'resources'), orderBy('createdAt', 'desc')),
-      (snap) => {
-        setResources(snap.docs.map(d => ({ id: d.id, ...d.data() } as Resource)));
-      },
-      (error) => handleFirestoreError(error, OperationType.LIST, `classes/${classroom.id}/resources`)
-    );
+    const problemSub = supabase
+      .channel('student_problems_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'problems', filter: `classroom_id=eq.${classroom.id}` }, () => {
+        fetchProblems();
+      })
+      .subscribe();
+
+    // Initial fetch and subscription for resources
+    const fetchResources = async () => {
+      const { data } = await supabase
+        .from('resources')
+        .select('*')
+        .eq('classroom_id', classroom.id)
+        .order('created_at', { ascending: false });
+      if (data) setResources(data as unknown as Resource[]);
+    };
+
+    const resourceSub = supabase
+      .channel('student_resources_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'resources', filter: `classroom_id=eq.${classroom.id}` }, () => {
+        fetchResources();
+      })
+      .subscribe();
+
+    fetchProblems();
+    fetchResources();
 
     return () => {
-      unsubProblems();
-      unsubResources();
+      problemSub.unsubscribe();
+      resourceSub.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classroom.id]);
 
   useEffect(() => {
     if (!selectedProblem || !user) return;
     
     // Fetch user's submissions for this problem
-    const unsubSubmissions = onSnapshot(
-      query(
-        collection(db, 'classes', classroom.id, 'submissions'),
-        where('studentId', '==', user.uid),
-        where('problemId', '==', selectedProblem.id),
-        orderBy('submittedAt', 'desc')
-      ),
-      (snap) => {
-        const subs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Submission));
-        setSubmissions(subs);
-      },
-      (error) => handleFirestoreError(error, OperationType.LIST, `classes/${classroom.id}/submissions`)
-    );
+    const fetchSubmissions = async () => {
+      const { data } = await supabase
+        .from('submissions')
+        .select('*, problems(title, language)')
+        .eq('student_id', user.id)
+        .eq('problem_id', selectedProblem.id)
+        .order('submitted_at', { ascending: false });
+      
+      if (data) {
+        setSubmissions(data.map(d => ({
+          id: d.id,
+          studentId: d.student_id,
+          problemId: d.problem_id,
+          problemTitle: d.problems?.title,
+          language: d.problems?.language,
+          code: d.code,
+          output: d.output,
+          status: d.status,
+          feedback: d.feedback,
+          submittedAt: d.submitted_at
+        } as Submission)));
+      }
+    };
 
-    return () => unsubSubmissions();
+    const subSub = supabase
+      .channel('student_subs_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions', filter: `student_id=eq.${user.id}` }, () => {
+        fetchSubmissions();
+      })
+      .subscribe();
+
+    fetchSubmissions();
+
+    return () => {
+      subSub.unsubscribe();
+    };
   }, [selectedProblem, user, classroom.id]);
 
-  // Sync code to Firestore (throttled)
+  // Sync code to Supabase (throttled)
   useEffect(() => {
     if (!user || !selectedProblem || !code) return;
 
@@ -127,17 +184,20 @@ export default function StudentClassroom({
       if (now - lastSyncRef.current < 2000) return; // Sync every 2 seconds
 
       try {
-        await setDoc(doc(db, 'classes', classroom.id, 'liveCode', user.uid), {
-          studentId: user.uid,
-          studentName: profile?.name || 'Student',
-          studentPhotoURL: profile?.photoURL || null,
-          code,
-          language: selectedProblem.language,
-          lastUpdated: new Date().toISOString()
-        });
+        await supabase
+          .from('live_sessions')
+          .upsert({
+            classroom_id: classroom.id,
+            student_id: user.id,
+            problem_id: selectedProblem.id,
+            code,
+            language: selectedProblem.language,
+            last_updated: new Date().toISOString()
+          }, { onConflict: 'classroom_id,student_id' });
+        
         lastSyncRef.current = now;
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `classes/${classroom.id}/liveCode/${user.uid}`);
+        console.error('Failed to sync code:', err);
       }
     };
 
@@ -148,7 +208,7 @@ export default function StudentClassroom({
   const handleRun = async () => {
     if (!selectedProblem || !code) return;
     setIsRunning(true);
-    let outputResult = '';
+    let outputResult: string;
     setOutput('Running code...');
 
     try {
@@ -172,7 +232,7 @@ export default function StudentClassroom({
       console.warn('Execution Engine failed, using AI simulation:', err);
       outputResult = `[SIMULATED OUTPUT]\n${await simulateOutput(code, selectedProblem.language)}`;
     } finally {
-      setOutput(outputResult);
+      setOutput(outputResult!);
       setIsRunning(false);
     }
   };
@@ -180,7 +240,8 @@ export default function StudentClassroom({
   const simulateOutput = async (code: string, language: string) => {
     try {
       const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey: (process.env as any).GEMINI_API_KEY || '' });
+      const aiToken = (process.env as unknown as { GEMINI_API_KEY: string }).GEMINI_API_KEY || '';
+      const ai = new GoogleGenAI({ apiKey: aiToken });
       
       const prompt = `You are a code execution engine. Analyze the following ${language} code and provide the exact output it would produce. If there are syntax errors, provide the error message. Do not include any explanation, just the raw output.\n\nCode:\n${code}`;
       
@@ -199,45 +260,23 @@ export default function StudentClassroom({
     if (!user || !selectedProblem || !code) return;
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'classes', classroom.id, 'submissions'), {
-        studentId: user.uid,
-        studentName: profile?.name || 'Student',
-        studentPhotoURL: profile?.photoURL || null,
-        problemId: selectedProblem.id,
-        problemTitle: selectedProblem.title,
-        language: selectedProblem.language,
-        classId: classroom.id,
-        teacherId: classroom.teacherId,
-        code,
-        output,
-        status: 'pending',
-        submittedAt: new Date().toISOString()
-      });
+      const { error } = await supabase
+        .from('submissions')
+        .insert({
+          student_id: user.id,
+          problem_id: selectedProblem.id,
+          code,
+          output,
+          status: 'pending'
+        });
+      
+      if (error) throw error;
       alert('Submission received!');
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, `classes/${classroom.id}/submissions`);
+      console.error('Submission failed:', err);
+      alert('Submission failed');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const getDefaultCode = (lang: string) => {
-    switch (lang) {
-      case 'python': return 'print("Hello, World!")';
-      case 'javascript': return 'console.log("Hello, World!");';
-      case 'typescript': return 'console.log("Hello, TypeScript!");';
-      case 'java': return 'public class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello, World!");\n  }\n}';
-      case 'cpp': return '#include <iostream>\n\nint main() {\n  std::cout << "Hello, World!" << std::endl;\n  return 0;\n}';
-      case 'csharp': return 'using System;\nclass Program {\n  static void Main() {\n    Console.WriteLine("Hello, World!");\n  }\n}';
-      case 'go': return 'package main\nimport "fmt"\nfunction main() {\n  fmt.Println("Hello, World!")\n}';
-      case 'rust': return 'fn main() {\n    println!("Hello, World!");\n}';
-      case 'php': return '<?php\necho "Hello, World!";';
-      case 'ruby': return 'puts "Hello, World!"';
-      case 'swift': return 'print("Hello, World!")';
-      case 'kotlin': return 'fun main() {\n    println("Hello, World!")\n}';
-      case 'sql': return 'SELECT * FROM users;';
-      case 'html': return '<!DOCTYPE html>\n<html>\n<body>\n<h1>Hello World</h1>\n</body>\n</html>';
-      default: return '// Start coding...';
     }
   };
 
@@ -271,6 +310,19 @@ export default function StudentClassroom({
                <span className={cn("text-[9px] font-mono uppercase tracking-widest", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>{classroom.roomCode}</span>
             </div>
           </div>
+          <div className={cn("h-5 w-px ml-4", theme === 'light' ? "bg-zinc-200" : "bg-zinc-800")} />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+            className={cn(
+              "ml-2 rounded-xl transition-all h-9 px-3",
+              theme === 'light' ? "text-zinc-600 hover:bg-zinc-100" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+            )}
+            title={isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+          >
+            {isSidebarVisible ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+          </Button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -335,11 +387,25 @@ export default function StudentClassroom({
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Side: Tasks & Resources (Glassmorphism Sidebar) */}
-        <div className={cn(
-                "w-[450px] border-r flex flex-col relative z-40 overflow-hidden transition-colors duration-500",
-                theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950 border-zinc-900"
-              )}>
-                <div className="p-6 pb-4 flex gap-4">
+        <motion.div 
+          initial={false}
+          animate={{ 
+            width: isSidebarVisible ? 440 : 0,
+            opacity: isSidebarVisible ? 1 : 0,
+            x: isSidebarVisible ? 0 : -20
+          }}
+          transition={{ 
+            duration: 0.4, 
+            ease: [0.16, 1, 0.3, 1],
+            opacity: { duration: 0.2 }
+          }}
+          className={cn(
+            "border-r flex flex-col relative z-40 overflow-hidden transition-colors duration-500 shrink-0",
+            theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950 border-zinc-900"
+          )}
+        >
+          <div className="w-[440px] flex flex-col h-full"> 
+            <div className="p-6 pb-4 flex gap-4">
                   <button 
                     onClick={() => setActivePanel('problem')}
                     className={cn(
@@ -503,7 +569,7 @@ export default function StudentClassroom({
                       )}>
                         <ReactMarkdown
                           components={{
-                            code({ node, inline, className, children, ...props }: any) {
+                            code({ inline, className, children, ...props }: { inline?: boolean, className?: string, children?: React.ReactNode }) {
                               const match = /language-(\w+)/.exec(className || '');
                               return !inline && match ? (
                                 <div className={cn(
@@ -634,10 +700,11 @@ export default function StudentClassroom({
             </AnimatePresence>
           </div>
         </div>
+        </motion.div>
 
           <div className={cn(
             "flex-1 flex flex-col relative shadow-[inset_0_0_100px_rgba(0,0,0,0.5)] transition-colors duration-500",
-            theme === 'light' ? "bg-zinc-50" : theme === 'hc-black' ? "bg-black" : "bg-[#0d0d0d]"
+            theme === 'light' ? "bg-zinc-50" : "bg-[#0d0d0d]"
           )}>
             <div className="absolute top-0 right-0 p-8 z-10 pointer-events-none">
                <div className={cn(

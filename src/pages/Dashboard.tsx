@@ -1,198 +1,210 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion, orderBy, limit } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { ClassRoom, Problem, Submission, Resource } from '../types';
+import { ClassRoom, DBClassroom } from '../types';
 import Loader from '../components/Loader';
-import { Plus, BookOpen, LogOut, Search, Clock, Activity, ArrowRight, CheckCircle, FileText, Code } from 'lucide-react';
-import { auth } from '../lib/firebase';
+import { Plus, BookOpen, Activity, ArrowRight, CheckCircle, FileText, Code } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLanguageIcon } from '../lib/utils';
 
 import DashboardLayout from '../components/DashboardLayout';
 
+interface ActivityItem {
+  id: string;
+  type: 'submission' | 'problem' | 'resource';
+  title: string;
+  className: string;
+  timestamp: string;
+  classId: string;
+  status?: string;
+  language?: string;
+}
+
 export default function Dashboard() {
   const { user, profile } = useAuth();
-  const [classes, setClasses] = useState<ClassRoom[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [roomCode, setRoomCode] = useState('');
-  const [joining, setJoining] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [roomCode, setRoomCode] = useState(() => searchParams.get('join')?.toUpperCase() || '');
+  const [joining, setJoining] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const autoJoinCode = searchParams.get('join');
-    if (autoJoinCode) {
-      setRoomCode(autoJoinCode.toUpperCase());
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    const autoJoinCode = searchParams.get('join');
-    if (autoJoinCode && user && profile?.role === 'student' && !joining) {
-      // Auto-trigger join for students
-      handleJoinClass(new Event('submit') as any);
-    }
-  }, [user, profile, searchParams]);
-
-  useEffect(() => {
-    fetchClasses();
-  }, [user, profile]);
-
-  const fetchClasses = async () => {
+  const fetchClasses = React.useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      // If profile is missing, we try to fetch as teacher first, then student
-      // This is a backup for when the profile document is failing to sync correctly
-      const teacherQ = query(collection(db, 'classes'), where('teacherId', '==', user.uid));
-      const studentQ = query(collection(db, 'classes'), where('studentIds', 'array-contains', user.uid));
+      // Fetch classes where user is teacher
+      const { data: teacherClassesData, error: teacherError } = await supabase
+        .from('classrooms')
+        .select('*')
+        .eq('teacher_id', user.id);
+
+      if (teacherError) throw teacherError;
+
+      // Fetch classes where user is student (enrolled)
+      const { data: studentEnrollments, error: studentError } = await supabase
+        .from('enrollments')
+        .select('classroom_id, classrooms(*)')
+        .eq('student_id', user.id);
+
+      if (studentError) throw studentError;
+
+      const studentClassesData = (studentEnrollments || []).map(e => e.classrooms).filter(Boolean);
       
-      const [teacherSnap, studentSnap] = await Promise.all([getDocs(teacherQ), getDocs(studentQ)]);
-      
-      const teacherClasses = teacherSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as ClassRoom));
-      const studentClasses = studentSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as ClassRoom));
-      
-      // Merge unique classes
-      const allClassIds = new Set(teacherClasses.map(c => c.id));
-      const combinedClasses = [...teacherClasses, ...studentClasses.filter(c => !allClassIds.has(c.id))];
-      
-      // Fetch representative language for each class
-      const classesWithLanguage = await Promise.all(combinedClasses.map(async (cls) => {
-        try {
-          const probQ = query(collection(db, 'classes', cls.id, 'problems'), orderBy('createdAt', 'desc'), limit(1));
-          const probSnap = await getDocs(probQ);
-          if (!probSnap.empty) {
-            return { ...cls, language: probSnap.docs[0].data().language };
-          }
-        } catch (e) {
-          console.error("Error fetching language for class", cls.id, e);
+      // Combine and filter unique
+      const combined: DBClassroom[] = [...(teacherClassesData as unknown as DBClassroom[] || [])];
+      (studentClassesData as unknown as DBClassroom[]).forEach((sc) => {
+        if (sc && !combined.find((c) => c.id === sc.id)) {
+          combined.push(sc);
         }
-        return cls;
+      });
+
+      const formattedClasses = combined.map(c => ({
+        id: c.id,
+        className: c.class_name,
+        teacherId: c.teacher_id,
+        roomCode: c.room_code,
+        createdAt: c.created_at
+      } as ClassRoom));
+
+      // Fetch most recent problem language for each class to show icon
+      const classesWithLanguage = await Promise.all(formattedClasses.map(async (cls) => {
+        const { data: prob } = await supabase
+          .from('problems')
+          .select('language')
+          .eq('classroom_id', cls.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        return { ...cls, language: prob?.language };
       }));
       
-      setClasses(classesWithLanguage as (ClassRoom & { language?: string })[]);
+      setClasses(classesWithLanguage);
       
-      // Fetch activity
-      if (combinedClasses.length > 0) {
-        const allActivity: any[] = [];
-        
-        for (const cls of combinedClasses) {
-          try {
-            // Check if we are teacher for this class
-            const isTeacher = cls.teacherId === user.uid;
-
-            if (isTeacher) {
-              // Teacher sees recent submissions
-              const subQ = query(
-                collection(db, 'classes', cls.id, 'submissions'),
-                where('teacherId', '==', user.uid),
-                orderBy('submittedAt', 'desc'),
-                limit(3)
-              );
-              const subSnap = await getDocs(subQ);
-              subSnap.forEach(d => {
-                allActivity.push({
-                  id: d.id,
-                  type: 'submission',
-                  title: `New submission from Student ${d.data().studentId.substring(0, 5)}`,
-                  className: cls.className,
-                  timestamp: d.data().submittedAt,
-                  classId: cls.id,
-                  status: d.data().status
-                });
-              });
-            } else {
-              // Student sees new problems and resources
-              const probQ = query(
-                collection(db, 'classes', cls.id, 'problems'),
-                orderBy('createdAt', 'desc'),
-                limit(2)
-              );
-              const probSnap = await getDocs(probQ);
-              probSnap.forEach(d => {
-                allActivity.push({
-                  id: d.id,
-                  type: 'problem',
-                  title: `New Problem: ${d.data().title}`,
-                  className: cls.className,
-                  timestamp: d.data().createdAt,
-                  classId: cls.id,
-                  language: d.data().language
-                });
-              });
-
-              const resQ = query(
-                collection(db, 'classes', cls.id, 'resources'),
-                orderBy('createdAt', 'desc'),
-                limit(2)
-              );
-              const resSnap = await getDocs(resQ);
-              resSnap.forEach(d => {
-                allActivity.push({
-                  id: d.id,
-                  type: 'resource',
-                  title: `New Resource: ${d.data().name}`,
-                  className: cls.className,
-                  timestamp: d.data().createdAt,
-                  classId: cls.id
-                });
-              });
-            }
-          } catch (activityErr) {
-            console.warn(`Could not fetch activity for class ${cls.id}:`, activityErr);
-          }
+      // Parallelize activity fetching for better performance
+      const activityPromises = formattedClasses.map(async (cls) => {
+        const classActivity: ActivityItem[] = [];
+        if (cls.teacherId === user.id) {
+          // Teacher activity: recent submissions
+          const { data: subs } = await supabase
+            .from('submissions')
+            .select('*, profiles(name), problems(title)')
+            .eq('problems.classroom_id', cls.id)
+            .order('submitted_at', { ascending: false })
+            .limit(3);
+          
+          subs?.forEach(s => {
+            classActivity.push({
+              id: s.id,
+              type: 'submission',
+              title: `New submission from ${s.profiles?.name || 'Student'}`,
+              className: cls.className,
+              timestamp: s.submitted_at,
+              classId: cls.id,
+              status: s.status
+            });
+          });
+        } else {
+          // Student activity: recent problems
+          const { data: probs } = await supabase
+            .from('problems')
+            .select('*')
+            .eq('classroom_id', cls.id)
+            .order('created_at', { ascending: false })
+            .limit(2);
+          
+          probs?.forEach(p => {
+            classActivity.push({
+              id: p.id,
+              type: 'problem',
+              title: `New Problem: ${p.title}`,
+              className: cls.className,
+              timestamp: p.created_at,
+              classId: cls.id,
+              language: p.language
+            });
+          });
         }
-        
-        setActivities(allActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
-      }
+        return classActivity;
+      });
+
+      const allActivityResults = await Promise.all(activityPromises);
+      const allActivity = allActivityResults.flat();
+      
+      setActivities(allActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5));
     } catch (err) {
-      console.error('Error fetching classes:', err);
-      try {
-        handleFirestoreError(err, OperationType.GET, 'classes');
-      } catch (e) {
-        setError('Permission error while fetching classrooms. Please refresh.');
-      }
+      console.error('Error fetching dashboard data:', err);
+      setError('Error connecting to database. Please check your configuration.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const handleJoinClass = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleJoinClass = React.useCallback(async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!roomCode || !user) return;
     setJoining(true);
     setError('');
     try {
-      const q = query(collection(db, 'classes'), where('roomCode', '==', roomCode.toUpperCase()));
-      const querySnapshot = await getDocs(q);
+      const { data: classroom, error: fetchError } = await supabase
+        .from('classrooms')
+        .select('id')
+        .eq('room_code', roomCode.toUpperCase())
+        .single();
       
-      if (querySnapshot.empty) {
+      if (fetchError || !classroom) {
         setError('Classroom not found. Please check the code.');
         return;
       }
 
-      const classroom = querySnapshot.docs[0];
-      await updateDoc(doc(db, 'classes', classroom.id), {
-        studentIds: arrayUnion(user.uid)
-      });
+      const { error: enrollError } = await supabase
+        .from('enrollments')
+        .insert({
+          student_id: user.id,
+          classroom_id: classroom.id
+        });
+
+      if (enrollError) {
+        if (enrollError.code === '23505') { // Unique constraint violation
+          navigate(`/classroom/${classroom.id}`);
+          return;
+        }
+        throw enrollError;
+      }
 
       navigate(`/classroom/${classroom.id}`);
-    } catch (err: any) {
-      try {
-        handleFirestoreError(err, OperationType.UPDATE, `classes/${roomCode}`);
-      } catch (e) {
-        setError(err.message || 'Failed to join classroom');
-      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to join classroom');
     } finally {
       setJoining(false);
     }
-  };
+  }, [roomCode, user, navigate]);
+
+
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchClasses();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchClasses]);
+
+  useEffect(() => {
+    const autoJoinCode = searchParams.get('join');
+    if (autoJoinCode && user && profile?.role === 'student' && !joining) {
+      const timer = setTimeout(() => {
+        handleJoinClass();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [user, profile, searchParams, joining, handleJoinClass]);
+
 
   if (loading) return <Loader fullScreen />;
 
@@ -209,7 +221,7 @@ export default function Dashboard() {
             <span className="text-blue-600 uppercase">Dashboard.</span>
           </h1>
           <p className="text-zinc-600 mt-4 text-base font-medium tracking-tight">
-            Welcome back, <span className="text-black font-bold">{profile?.name || user?.displayName || 'Student'}</span>
+            Welcome back, <span className="text-black font-bold">{profile?.name || user?.user_metadata?.name || 'Student'}</span>
           </p>
         </div>
 
@@ -298,9 +310,9 @@ export default function Dashboard() {
                         <div className={cn(
                           "w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-zinc-100 p-2",
                         )}>
-                          {(cls as any).language ? (
+                          {cls.language ? (
                             <img 
-                              src={getLanguageIcon((cls as any).language)} 
+                              src={getLanguageIcon(cls.language)} 
                               alt="" 
                               className="w-full h-full object-contain"
                               referrerPolicy="no-referrer"

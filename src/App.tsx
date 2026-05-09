@@ -14,6 +14,7 @@ import Classroom from './pages/Classroom';
 import CreateClassroom from './pages/CreateClassroom';
 import ProfilePage from './pages/ProfilePage';
 import AITutor from './pages/AITutor';
+import AuthCallback from './pages/AuthCallback';
 import Loader from './components/Loader';
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route 
           path="/login" 
           element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 

@@ -4,15 +4,13 @@ import {
   LayoutDashboard, 
   BookOpen, 
   PlusCircle, 
-  Settings, 
   LogOut, 
   Code2,
   ChevronRight,
   MessageSquare,
   User
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
 
@@ -24,19 +22,20 @@ interface SidebarProps {
   theme?: 'light' | 'vs-dark';
 }
 
-export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse, theme = 'vs-dark' }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    auth.signOut().then(() => navigate('/login'));
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: BookOpen, label: 'My Classrooms', path: '/classrooms' },
     { icon: MessageSquare, label: 'AI Tutor', path: '/ai-tutor' },
-    { icon: User, label: 'My Profile', path: `/profile/${user?.uid}` },
+    { icon: User, label: 'My Profile', path: `/profile/${user?.id}` },
   ];
 
   if (profile?.role === 'teacher') {
@@ -111,18 +110,18 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
       {/* User Info & Logout */}
       <div className="p-6 border-t space-y-5 border-zinc-900">
         {!isCollapsed && (
-          <Link to={`/profile/${user?.uid}`} className="block">
+          <Link to={`/profile/${user?.id}`} className="block">
             <div className="px-3.5 py-3 rounded-[2rem] border flex items-center gap-4 transition-all cursor-pointer group bg-zinc-900/50 border-zinc-900 hover:bg-zinc-900 hover:border-zinc-800">
               <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 shrink-0 group-hover:scale-105 transition-transform border-zinc-800">
                  <img 
-                   src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} 
+                   src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} 
                    alt="User" 
                    className="w-full h-full object-cover"
                    referrerPolicy="no-referrer"
                  />
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-bold truncate tracking-tight transition-colors text-white group-hover:text-blue-400">{profile?.name || user?.displayName}</p>
+                <p className="text-sm font-bold truncate tracking-tight transition-colors text-white group-hover:text-blue-400">{profile?.name || user?.user_metadata?.name}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <div className={cn("w-1 h-1 rounded-full animate-pulse", profile?.role === 'teacher' ? "bg-amber-500" : "bg-blue-500")} />
                   <p className="text-[9px] uppercase font-black tracking-widest leading-none text-zinc-500">{profile?.role}</p>
@@ -132,10 +131,10 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
           </Link>
         )}
         {isCollapsed && (
-          <Link to={`/profile/${user?.uid}`} className="flex justify-center mb-4">
+          <Link to={`/profile/${user?.id}`} className="flex justify-center mb-4">
              <div className="w-10 h-10 rounded-xl overflow-hidden border transition-all cursor-pointer border-zinc-800 hover:border-blue-500">
                <img 
-                 src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} 
+                 src={profile?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} 
                  alt="User" 
                  className="w-full h-full object-cover"
                  referrerPolicy="no-referrer"

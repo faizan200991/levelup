@@ -13,6 +13,8 @@ interface Message {
   text: string;
 }
 
+import { cn } from '../lib/utils';
+
 export default function AITutor() {
   const { profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
@@ -184,6 +186,4 @@ export default function AITutor() {
   );
 }
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}
+

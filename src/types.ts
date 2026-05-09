@@ -17,12 +17,22 @@ export interface UserProfile {
   lastActive?: string;
 }
 
+export interface DBClassroom {
+  id: string;
+  class_name: string;
+  teacher_id: string;
+  room_code: string;
+  created_at: string;
+}
+
 export interface ClassRoom {
   id: string;
   className: string;
   teacherId: string;
   roomCode: string;
   createdAt: string;
+  language?: string;
+  description?: string;
 }
 
 export interface Problem {
@@ -66,6 +76,8 @@ export interface LiveCode {
   studentId: string;
   studentName: string;
   studentPhotoURL?: string;
+  problemId?: string;
+  problemTitle?: string;
   code: string;
   language: string;
   lastUpdated: string;

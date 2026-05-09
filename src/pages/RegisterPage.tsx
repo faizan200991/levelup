@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Code2, ArrowRight } from 'lucide-react';
@@ -17,39 +15,52 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        navigate('/dashboard');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [navigate]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+          },
+        },
+      });
 
-      try {
-        await setDoc(doc(db, 'users', user.uid), {
-          name,
-          email,
-          role,
-          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
-          createdAt: new Date().toISOString(),
-          bio: '',
-          learningPath: 'Software Engineer',
-          learningPathSubtitle: 'Mastering Web Development & Databases',
-          location: 'Global Remote',
-          locationSubtitle: 'Learning across borders',
-          classStatus: 'Active Member',
-          classStatusSubtitle: 'Engaging in collaborative classrooms',
-          lastActive: new Date().toISOString()
-        });
-      } catch (dbErr) {
-        handleFirestoreError(dbErr, OperationType.WRITE, `users/${user.uid}`);
+      if (signUpError) throw signUpError;
+      
+      if (data.user) {
+        if (data.session) {
+          navigate('/dashboard');
+        } else {
+          setMessage('Confirmation email sent! Please verify your email to continue.');
+          setLoading(false);
+        }
       }
-
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Failed to register');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to register';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -59,40 +70,44 @@ export default function RegisterPage() {
     setGoogleLoading(true);
     setError('');
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Check if user exists
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (!userDoc.exists()) {
-        // Create new user profile with selected role
-        try {
-          await setDoc(doc(db, 'users', user.uid), {
-            name: user.displayName || 'Google User',
-            email: user.email || '',
-            role,
-            photoURL: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
-            createdAt: new Date().toISOString(),
-            bio: '',
-            learningPath: 'Software Engineer',
-            learningPathSubtitle: 'Mastering Web Development & Databases',
-            location: 'Global Remote',
-            locationSubtitle: 'Learning across borders',
-            classStatus: 'Active Member',
-            classStatusSubtitle: 'Engaging in collaborative classrooms',
-            lastActive: new Date().toISOString()
-          });
-        } catch (dbErr) {
-          handleFirestoreError(dbErr, OperationType.WRITE, `users/${user.uid}`);
+      const { data, error: googleError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          skipBrowserRedirect: true
         }
+      });
+      if (googleError) throw googleError;
+
+      if (data?.url) {
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+          data.url,
+          'google_login_popup',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+
+        if (!popup) {
+          setError('Popup blocked! Please allow popups for this site.');
+          setGoogleLoading(false);
+          return;
+        }
+
+        // Poll to check if popup is closed
+        const pollTimer = window.setInterval(() => {
+          if (popup.closed) {
+            window.clearInterval(pollTimer);
+            setGoogleLoading(false);
+          }
+        }, 1000);
       }
-      
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Failed to register with Google');
-    } finally {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to register with Google';
+      setError(message);
       setGoogleLoading(false);
     }
   };
@@ -147,6 +162,16 @@ export default function RegisterPage() {
           </div>
  
           <form onSubmit={handleRegister} className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-xs font-medium">
+                {error}
+              </div>
+            )}
+            {message && (
+              <div className="p-4 bg-green-50 border border-green-200 text-green-600 rounded-2xl text-xs font-medium">
+                {message}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input 
                 label="Your Full Name"
