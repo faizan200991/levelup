@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, onSnapshot, collection, query, orderBy, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { ClassRoom, Problem } from '../types';
+import { ClassRoom } from '../types';
 import { cn } from '../lib/utils';
 import Loader from '../components/Loader';
 import TeacherClassroom from './TeacherClassroom';
@@ -11,7 +10,7 @@ import StudentClassroom from './StudentClassroom';
 
 export default function Classroom() {
   const { classId } = useParams<{ classId: string }>();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [classroom, setClassroom] = useState<ClassRoom | null>(null);
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState<'light' | 'vs-dark'>('vs-dark');
@@ -20,17 +19,47 @@ export default function Classroom() {
   useEffect(() => {
     if (!classId) return;
 
-    const unsub = onSnapshot(doc(db, 'classes', classId), (docSnap) => {
-      if (docSnap.exists()) {
-        setClassroom({ id: docSnap.id, ...docSnap.data() } as ClassRoom);
-        setLoading(false);
-      } else {
+    const fetchClassroom = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('classrooms')
+          .select('*')
+          .eq('id', classId)
+          .single();
+        
+        if (error) throw error;
+
+        if (data) {
+          setClassroom({
+            id: data.id,
+            className: data.class_name,
+            roomCode: data.room_code,
+            teacherId: data.teacher_id,
+            createdAt: data.created_at
+          } as ClassRoom);
+          setLoading(false);
+        } else {
+          navigate('/dashboard');
+        }
+      } catch (err) {
+        console.error('Error fetching classroom:', err);
         navigate('/dashboard');
       }
-    });
+    };
 
-    return () => unsub();
-  }, [classId]);
+    const classSub = supabase
+      .channel(`class_${classId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'classrooms', filter: `id=eq.${classId}` }, () => {
+        fetchClassroom();
+      })
+      .subscribe();
+
+    fetchClassroom();
+
+    return () => {
+      classSub.unsubscribe();
+    };
+  }, [classId, navigate]);
 
   if (loading) return <Loader fullScreen />;
   if (!classroom || !profile) return null;

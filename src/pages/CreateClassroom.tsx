@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { BookOpen, ArrowLeft, Globe, Plus } from 'lucide-react';
+import { Globe, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import DashboardLayout from '../components/DashboardLayout';
@@ -26,14 +25,20 @@ export default function CreateClassroom() {
     setLoading(true);
     try {
       const roomCode = generateRoomCode();
-      const docRef = await addDoc(collection(db, 'classes'), {
-        className,
-        teacherId: user.uid,
-        roomCode,
-        createdAt: new Date().toISOString(),
-        studentIds: []
-      });
-      navigate(`/classroom/${docRef.id}`);
+      const { data, error } = await supabase
+        .from('classrooms')
+        .insert({
+          class_name: className,
+          teacher_id: user.id,
+          room_code: roomCode
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      if (data) {
+        navigate(`/classroom/${data.id}`);
+      }
     } catch (err) {
       console.error('Error creating class:', err);
     } finally {

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { ClassRoom } from '../types';
+import { ClassRoom, DBClassroom } from '../types';
 import Loader from '../components/Loader';
-import { BookOpen, Search, ArrowRight, Grid, List as ListIcon } from 'lucide-react';
+import { BookOpen, Search, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn, getLanguageIcon } from '../lib/utils';
+import { getLanguageIcon } from '../lib/utils';
 import DashboardLayout from '../components/DashboardLayout';
 import { Input } from '../components/Input';
 
@@ -16,33 +15,58 @@ export default function MyClassrooms() {
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchClasses();
-  }, [user]);
-
-  const fetchClasses = async () => {
+  const fetchClasses = React.useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const teacherQ = query(collection(db, 'classes'), where('teacherId', '==', user.uid));
-      const studentQ = query(collection(db, 'classes'), where('studentIds', 'array-contains', user.uid));
+      const { data: teacherData, error: tError } = await supabase
+        .from('classrooms')
+        .select('*')
+        .eq('teacher_id', user.id);
       
-      const [teacherSnap, studentSnap] = await Promise.all([getDocs(teacherQ), getDocs(studentQ)]);
+      if (tError) throw tError;
+
+      const { data: enrollData, error: eError } = await supabase
+        .from('enrollments')
+        .select('classrooms(*)')
+        .eq('student_id', user.id);
       
-      const teacherClasses = teacherSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as ClassRoom));
-      const studentClasses = studentSnap.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) } as ClassRoom));
-      
+      if (eError) throw eError;
+
+      const teacherClasses = (teacherData || []).map(c => ({
+        id: c.id,
+        className: c.class_name,
+        roomCode: c.room_code,
+        teacherId: c.teacher_id,
+        createdAt: c.created_at
+      } as ClassRoom));
+
+      const studentClasses = (enrollData || [])
+        .map((e: { classrooms: unknown }) => e.classrooms as DBClassroom)
+        .filter(Boolean)
+        .map((c) => ({
+          id: c.id,
+          className: c.class_name,
+          roomCode: c.room_code,
+          teacherId: c.teacher_id,
+          createdAt: c.created_at
+        } as ClassRoom));
+
       const allClassIds = new Set(teacherClasses.map(c => c.id));
       const combinedClasses = [...teacherClasses, ...studentClasses.filter(c => !allClassIds.has(c.id))];
       
       const classesWithLanguage = await Promise.all(combinedClasses.map(async (cls) => {
         try {
-          const probQ = query(collection(db, 'classes', cls.id, 'problems'), orderBy('createdAt', 'desc'), limit(1));
-          const probSnap = await getDocs(probQ);
-          if (!probSnap.empty) {
-            return { ...cls, language: probSnap.docs[0].data().language };
+          const { data: probData } = await supabase
+            .from('problems')
+            .select('language')
+            .eq('classroom_id', cls.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          
+          if (probData && probData.length > 0) {
+            return { ...cls, language: probData[0].language };
           }
         } catch (e) {
           console.error("Error fetching language for class", cls.id, e);
@@ -53,15 +77,17 @@ export default function MyClassrooms() {
       setClasses(classesWithLanguage as (ClassRoom & { language?: string })[]);
     } catch (err) {
       console.error('Error fetching classes:', err);
-      try {
-        handleFirestoreError(err, OperationType.GET, 'classes');
-      } catch (e) {
-        setError('Error loading classrooms.');
-      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchClasses();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchClasses]);
 
   const filteredClasses = classes.filter(cls => 
     cls.className.toLowerCase().includes(search.toLowerCase()) ||
@@ -120,9 +146,9 @@ export default function MyClassrooms() {
               >
                 <div className="flex justify-between items-start mb-6">
                   <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center border border-zinc-50 p-2 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
-                    {(cls as any).language ? (
+                    {cls.language ? (
                       <img 
-                        src={getLanguageIcon((cls as any).language)} 
+                        src={getLanguageIcon(cls.language)} 
                         alt="" 
                         className="w-full h-full object-contain"
                         referrerPolicy="no-referrer"

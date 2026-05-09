@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -14,13 +13,13 @@ import DashboardLayout from '../components/DashboardLayout';
 
 export default function ProfilePage() {
   const { uid } = useParams();
-  const { user, profile: currentProfile } = useAuth();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
-  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [photoURL, setPhotoURL] = useState<string | null>(null);
   const [learningPath, setLearningPath] = useState('');
   const [learningPathSubtitle, setLearningPathSubtitle] = useState('');
   const [location, setLocation] = useState('');
@@ -31,25 +30,45 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const isOwnProfile = user?.uid === uid;
+  const isOwnProfile = user?.id === uid;
 
   useEffect(() => {
     async function fetchProfile() {
       if (!uid) return;
       try {
-        const docSnap = await getDoc(doc(db, 'users', uid));
-        if (docSnap.exists()) {
-          const data = docSnap.data() as UserProfile;
-          setProfile(data);
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', uid)
+          .single();
+        
+        if (data) {
+          const profileData: UserProfile = {
+            uid: data.id,
+            email: data.email,
+            name: data.name,
+            role: data.role,
+            photoURL: data.photo_url,
+            bio: data.bio,
+            learningPath: data.learning_path,
+            learningPathSubtitle: data.learning_path_subtitle,
+            location: data.location,
+            locationSubtitle: data.location_subtitle,
+            classStatus: data.class_status,
+            classStatusSubtitle: data.class_status_subtitle,
+            createdAt: data.created_at,
+            lastActive: data.last_active
+          };
+          setProfile(profileData);
           setName(data.name);
           setBio(data.bio || '');
-          setPhotoBase64(data.photoURL || null);
-          setLearningPath(data.learningPath || 'Software Engineer');
-          setLearningPathSubtitle(data.learningPathSubtitle || 'Mastering Web Development & Databases');
+          setPhotoURL(data.photo_url || null);
+          setLearningPath(data.learning_path || 'Software Engineer');
+          setLearningPathSubtitle(data.learning_path_subtitle || 'Mastering Web Development & Databases');
           setLocation(data.location || 'Global Remote');
-          setLocationSubtitle(data.locationSubtitle || 'Learning across borders');
-          setClassStatus(data.classStatus || 'Active Member');
-          setClassStatusSubtitle(data.classStatusSubtitle || 'Engaged in collaborative classrooms');
+          setLocationSubtitle(data.location_subtitle || 'Learning across borders');
+          setClassStatus(data.class_status || 'Active Member');
+          setClassStatusSubtitle(data.class_status_subtitle || 'Engaged in collaborative classrooms');
         } else {
           setError('User not found');
         }
@@ -63,18 +82,33 @@ export default function ProfilePage() {
     fetchProfile();
   }, [uid]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 800000) {
-        alert('Image is too large. Please select a file smaller than 800KB.');
-        return;
+    if (file && user) {
+      try {
+        setUpdating(true);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}_${Math.random()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('materials')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('materials')
+          .getPublicUrl(filePath);
+
+        setPhotoURL(publicUrl);
+        // Also update the DB immediately if not in full edit mode? 
+        // No, let's wait for Save Changes to keep it consistent with the existing UI logic.
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : 'Failed to upload photo');
+      } finally {
+        setUpdating(false);
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoBase64(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -82,25 +116,42 @@ export default function ProfilePage() {
     if (!user || !uid) return;
     setUpdating(true);
     try {
-      const updateData: any = {
+      const updateData = {
         name,
         bio,
-        photoURL: photoBase64,
-        learningPath,
-        learningPathSubtitle,
+        photo_url: photoURL,
+        learning_path: learningPath,
+        learning_path_subtitle: learningPathSubtitle,
         location,
-        locationSubtitle,
-        classStatus,
-        classStatusSubtitle,
-        lastActive: new Date().toISOString()
+        location_subtitle: locationSubtitle,
+        class_status: classStatus,
+        class_status_subtitle: classStatusSubtitle,
+        last_active: new Date().toISOString()
       };
       
-      await updateDoc(doc(db, 'users', uid), updateData);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', uid);
       
-      setProfile({ ...profile!, ...updateData });
+      if (error) throw error;
+      
+      setProfile({ 
+        ...profile!, 
+        name, 
+        bio, 
+        photoURL, 
+        learningPath, 
+        learningPathSubtitle, 
+        location, 
+        locationSubtitle, 
+        classStatus, 
+        classStatusSubtitle 
+      });
       setEditing(false);
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `users/${uid}`);
+      console.error('Update failed:', err);
+      alert('Update failed');
     } finally {
       setUpdating(false);
     }
@@ -192,7 +243,7 @@ export default function ProfilePage() {
                         setEditing(false);
                         setName(profile.name);
                         setBio(profile.bio || '');
-                        setPhotoBase64(profile.photoURL || null);
+                        setPhotoURL(profile.photoURL || null);
                         setLearningPath(profile.learningPath || 'Software Engineer');
                         setLearningPathSubtitle(profile.learningPathSubtitle || '');
                         setLocation(profile.location || 'Global Remote');
@@ -221,8 +272,8 @@ export default function ProfilePage() {
               {/* Profile Photo */}
               <div className="relative group shrink-0">
                 <div className="w-40 h-40 md:w-48 md:h-48 rounded-[3rem] bg-zinc-50 border-8 border-white shadow-2xl overflow-hidden relative">
-                  {photoBase64 ? (
-                    <img src={photoBase64} alt={profile.name} className="w-full h-full object-cover" />
+                  {photoURL ? (
+                    <img src={photoURL} alt={profile.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-zinc-100">
                       <User className="w-16 h-16 text-zinc-300" />

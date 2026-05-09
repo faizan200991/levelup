@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { ClassRoom, Problem, LiveCode, Submission, Resource } from '../types';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -14,14 +13,12 @@ import {
   XCircle, 
   ChevronRight, 
   LayoutGrid, 
-  ListTodo, 
   MessageSquare, 
   Monitor,
   Copy,
   Check,
   FileText,
   Upload,
-  Link as LinkIcon,
   Trash2,
   Sun,
   Moon,
@@ -30,10 +27,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Editor } from '@monaco-editor/react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../lib/firebase';
 import { cn, getLanguageIcon } from '../lib/utils';
-import { deleteDoc } from 'firebase/firestore';
 
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -46,7 +40,7 @@ export default function TeacherClassroom({
   theme: 'light' | 'vs-dark',
   setTheme: (t: 'light' | 'vs-dark') => void
 }) {
-  const [activeTab, setActiveTab] = useState<'monitor' | 'problems' | 'submissions' | 'resources'>('monitor');
+  const [activeTab, setActiveTab] = useState<'monitor' | 'heatmap' | 'problems' | 'submissions' | 'resources'>('monitor');
   const [problems, setProblems] = useState<Problem[]>([]);
   const [liveCodes, setLiveCodes] = useState<LiveCode[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -68,9 +62,13 @@ export default function TeacherClassroom({
   const handleDeleteProblem = async (problemId: string) => {
     if (!window.confirm('Are you sure you want to delete this problem?')) return;
     try {
-      await deleteDoc(doc(db, 'classes', classroom.id, 'problems', problemId));
+      const { error } = await supabase
+        .from('problems')
+        .delete()
+        .eq('id', problemId);
+      if (error) throw error;
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `classes/${classroom.id}/problems/${problemId}`);
+      console.error('Failed to delete problem:', err);
       alert('Failed to delete problem');
     }
   };
@@ -78,43 +76,124 @@ export default function TeacherClassroom({
   const handleDeleteResource = async (resourceId: string) => {
     if (!window.confirm('Are you sure you want to delete this resource?')) return;
     try {
-      await deleteDoc(doc(db, 'classes', classroom.id, 'resources', resourceId));
+      const { error } = await supabase
+        .from('resources')
+        .delete()
+        .eq('id', resourceId);
+      if (error) throw error;
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `classes/${classroom.id}/resources/${resourceId}`);
+      console.error('Failed to delete resource:', err);
       alert('Failed to delete resource');
     }
   };
 
   useEffect(() => {
-    const unsubProblems = onSnapshot(
-      query(collection(db, 'classes', classroom.id, 'problems'), orderBy('createdAt', 'desc')),
-      (snap) => setProblems(snap.docs.map(d => ({ id: d.id, ...d.data() } as Problem))),
-      (error) => handleFirestoreError(error, OperationType.LIST, `classes/${classroom.id}/problems`)
-    );
+    // Initial fetch and subscription for problems
+    const fetchProblems = async () => {
+      const { data } = await supabase
+        .from('problems')
+        .select('*')
+        .eq('classroom_id', classroom.id)
+        .order('created_at', { ascending: false });
+      if (data) setProblems(data as unknown as Problem[]);
+    };
 
-    const unsubLive = onSnapshot(
-      collection(db, 'classes', classroom.id, 'liveCode'),
-      (snap) => setLiveCodes(snap.docs.map(d => ({ id: d.id, ...d.data() } as LiveCode))),
-      (error) => handleFirestoreError(error, OperationType.LIST, `classes/${classroom.id}/liveCode`)
-    );
+    const problemSub = supabase
+      .channel('problems_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'problems', filter: `classroom_id=eq.${classroom.id}` }, () => {
+        fetchProblems();
+      })
+      .subscribe();
 
-    const unsubSubmissions = onSnapshot(
-      query(collection(db, 'classes', classroom.id, 'submissions'), orderBy('submittedAt', 'desc')),
-      (snap) => setSubmissions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Submission))),
-      (error) => handleFirestoreError(error, OperationType.LIST, `classes/${classroom.id}/submissions`)
-    );
+    // Initial fetch and subscription for live sessions
+    const fetchLive = async () => {
+      const { data } = await supabase
+        .from('live_sessions')
+        .select('*, profiles(name, photo_url), problems(title)')
+        .eq('classroom_id', classroom.id);
+      
+      if (data) {
+        setLiveCodes(data.map(d => ({
+          id: d.id,
+          studentId: d.student_id,
+          studentName: d.profiles?.name || 'Student',
+          studentPhotoURL: d.profiles?.photo_url,
+          problemId: d.problem_id,
+          problemTitle: d.problems?.title,
+          code: d.code,
+          language: d.language,
+          lastUpdated: d.last_updated
+        } as LiveCode)));
+      }
+    };
 
-    const unsubResources = onSnapshot(
-      query(collection(db, 'classes', classroom.id, 'resources'), orderBy('createdAt', 'desc')),
-      (snap) => setResources(snap.docs.map(d => ({ id: d.id, ...d.data() } as Resource))),
-      (error) => handleFirestoreError(error, OperationType.LIST, `classes/${classroom.id}/resources`)
-    );
+    const liveSub = supabase
+      .channel('live_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sessions', filter: `classroom_id=eq.${classroom.id}` }, () => {
+        fetchLive();
+      })
+      .subscribe();
+
+    // Initial fetch and subscription for submissions
+    const fetchSubmissions = async () => {
+      const { data } = await supabase
+        .from('submissions')
+        .select('*, profiles(name, photo_url), problems(title, language)')
+        .eq('problems.classroom_id', classroom.id)
+        .order('submitted_at', { ascending: false });
+      
+      if (data) {
+        setSubmissions(data.map(d => ({
+          id: d.id,
+          studentId: d.student_id,
+          studentName: d.profiles?.name,
+          studentPhotoURL: d.profiles?.photo_url,
+          problemId: d.problem_id,
+          problemTitle: d.problems?.title,
+          language: d.problems?.language,
+          code: d.code,
+          output: d.output,
+          status: d.status,
+          feedback: d.feedback,
+          submittedAt: d.submitted_at
+        } as Submission)));
+      }
+    };
+
+    const submissionSub = supabase
+      .channel('submissions_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submissions' }, () => {
+        fetchSubmissions();
+      })
+      .subscribe();
+
+    // Initial fetch and subscription for resources
+    const fetchResources = async () => {
+      const { data } = await supabase
+        .from('resources')
+        .select('*')
+        .eq('classroom_id', classroom.id)
+        .order('created_at', { ascending: false });
+      if (data) setResources(data as unknown as Resource[]);
+    };
+
+    const resourceSub = supabase
+      .channel('resources_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'resources', filter: `classroom_id=eq.${classroom.id}` }, () => {
+        fetchResources();
+      })
+      .subscribe();
+
+    fetchProblems();
+    fetchLive();
+    fetchSubmissions();
+    fetchResources();
 
     return () => {
-      unsubProblems();
-      unsubLive();
-      unsubSubmissions();
-      unsubResources();
+      problemSub.unsubscribe();
+      liveSub.unsubscribe();
+      submissionSub.unsubscribe();
+      resourceSub.unsubscribe();
     };
   }, [classroom.id]);
 
@@ -175,12 +254,19 @@ export default function TeacherClassroom({
             </div>
           </motion.div>
           
-          <div className={cn("flex p-1.5 rounded-2xl border transition-all self-stretch lg:self-auto", theme === 'light' ? "bg-zinc-100 border-zinc-200 shadow-sm" : "bg-zinc-900 border-zinc-800")}>
+          <div className={cn("flex p-1.5 rounded-2xl border transition-all self-stretch lg:self-auto overflow-x-auto no-scrollbar", theme === 'light' ? "bg-zinc-100 border-zinc-200 shadow-sm" : "bg-zinc-900 border-zinc-800")}>
             <TabButton 
               active={activeTab === 'monitor'} 
               onClick={() => setActiveTab('monitor')}
               icon={<Monitor className="w-3.5 h-3.5" />}
-              label="Student Progress"
+              label="Live Feed"
+              theme={theme}
+            />
+            <TabButton 
+              active={activeTab === 'heatmap'} 
+              onClick={() => setActiveTab('heatmap')}
+              icon={<LayoutGrid className="w-3.5 h-3.5" />}
+              label="Heatmap"
               theme={theme}
             />
             <TabButton 
@@ -299,6 +385,22 @@ export default function TeacherClassroom({
                   </motion.div>
                 ))
               )}
+            </motion.div>
+          )}
+
+          {activeTab === 'heatmap' && (
+            <motion.div 
+              key="heatmap"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <ClassHeatmap 
+                problems={problems}
+                submissions={submissions}
+                liveCodes={liveCodes}
+                theme={theme}
+              />
             </motion.div>
           )}
 
@@ -514,8 +616,7 @@ export default function TeacherClassroom({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.05 }}
                     >
-                      {/* @ts-ignore */}
-                      <SubmissionCard key={sub.id} sub={sub} classroomId={classroom.id} theme={theme} />
+                      <SubmissionCard key={sub.id} sub={sub} theme={theme} />
                     </motion.div>
                   ))
                 )}
@@ -558,39 +659,197 @@ export default function TeacherClassroom({
   );
 }
 
+function ClassHeatmap({ problems, submissions, liveCodes, theme }: { problems: Problem[], submissions: Submission[], liveCodes: LiveCode[], theme: 'light' | 'vs-dark' }) {
+  // Aggregate all unique students from live codes and submissions
+  const studentsMap = new Map<string, { id: string, name: string, photoURL?: string }>();
+  
+  liveCodes.forEach(lc => {
+    if (!studentsMap.has(lc.studentId)) {
+      studentsMap.set(lc.studentId, { id: lc.studentId, name: lc.studentName, photoURL: lc.studentPhotoURL });
+    }
+  });
+  
+  submissions.forEach(sub => {
+    if (!studentsMap.has(sub.studentId)) {
+      studentsMap.set(sub.studentId, { id: sub.studentId, name: sub.studentName, photoURL: sub.studentPhotoURL });
+    }
+  });
+
+  const students = Array.from(studentsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+  if (problems.length === 0) {
+    return (
+      <div className={cn("py-20 text-center rounded-[3rem] border border-dashed transition-all", theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900/20 border-zinc-800")}>
+        <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner", theme === 'light' ? "bg-white text-zinc-100" : "bg-zinc-950 text-zinc-800")}>
+          <LayoutGrid className="w-6 h-6" />
+        </div>
+        <h3 className={cn("font-display font-bold text-2xl tracking-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>No Assignments Deployed</h3>
+        <p className={cn("mt-2 text-sm font-medium", theme === 'light' ? "text-zinc-500" : "text-zinc-400")}>Deploy your first task to see the engagement matrix.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(
+      "rounded-[3rem] border overflow-hidden transition-all",
+      theme === 'light' ? "bg-white border-zinc-200 shadow-xl" : "bg-zinc-950 border-zinc-900 shadow-2xl"
+    )}>
+      <div className="overflow-x-auto no-scrollbar">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className={cn("border-b", theme === 'light' ? "bg-zinc-50/50 border-zinc-100" : "bg-zinc-900/50 border-zinc-900")}>
+              <th className="p-6 text-left min-w-[240px]">
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  <span className={cn("text-[10px] font-black uppercase tracking-[0.2em]", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Student Node</span>
+                </div>
+              </th>
+              {problems.map(prob => (
+                <th key={prob.id} className="p-6 text-center min-w-[160px] border-l border-zinc-900/10 dark:border-white/5">
+                  <div className="space-y-1">
+                    <p className={cn("text-[10px] font-black uppercase tracking-widest truncate max-w-[120px] mx-auto", theme === 'light' ? "text-zinc-950" : "text-white")}>{prob.title}</p>
+                    <p className={cn("text-[9px] font-bold opacity-50 uppercase tracking-[0.1em]")}>{prob.language}</p>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {students.length === 0 ? (
+              <tr>
+                <td colSpan={problems.length + 1} className="p-20 text-center">
+                  <p className={cn("text-sm font-medium", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Waiting for student engagement...</p>
+                </td>
+              </tr>
+            ) : (
+              students.map(student => (
+                <tr key={student.id} className={cn("border-b last:border-none group", theme === 'light' ? "hover:bg-zinc-50 border-zinc-100" : "hover:bg-white/[0.02] border-zinc-900")}>
+                  <td className="p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-900 shadow-lg shrink-0">
+                        <img 
+                          src={student.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.id}`} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <span className={cn("text-sm font-bold tracking-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>{student.name}</span>
+                    </div>
+                  </td>
+                  {problems.map(prob => {
+                    const submission = submissions.find(s => s.studentId === student.id && (s.problemId === prob.id || s.problemTitle === prob.title));
+                    const liveCode = liveCodes.find(lc => lc.studentId === student.id && (lc.problemId === prob.id || lc.problemTitle === prob.title));
+                    
+                    let status: 'none' | 'active' | 'pending' | 'correct' | 'incorrect' = 'none';
+                    if (submission) {
+                      status = submission.status;
+                    } else if (liveCode) {
+                      status = 'active';
+                    }
+
+                    return (
+                      <td key={prob.id} className="p-4 text-center border-l border-zinc-900/10 dark:border-white/5">
+                        <div className="flex justify-center">
+                          {status === 'none' && (
+                            <div className={cn("w-3 h-3 rounded-full", theme === 'light' ? "bg-zinc-100" : "bg-white/5")} title="No engagement" />
+                          )}
+                          {status === 'active' && (
+                            <div className="w-4 h-4 rounded-lg bg-blue-500 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.5)]" title="Currently Working" />
+                          )}
+                          {status === 'pending' && (
+                            <div className="w-4 h-4 rounded-lg bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]" title="Awaiting Review">
+                              <Monitor className="w-2.5 h-2.5 text-white m-auto mt-0.5" />
+                            </div>
+                          )}
+                          {status === 'correct' && (
+                            <div className="w-4 h-4 rounded-lg bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" title="Protocol Accomplished">
+                              <Check className="w-2.5 h-2.5 text-white m-auto mt-0.5" />
+                            </div>
+                          )}
+                          {status === 'incorrect' && (
+                            <div className="w-4 h-4 rounded-lg bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]" title="Revision Required">
+                              <Plus className="w-2.5 h-2.5 text-white m-auto mt-0.5 rotate-45" />
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Legend */}
+      <div className={cn("p-6 border-t flex flex-wrap gap-8 items-center justify-center", theme === 'light' ? "bg-zinc-50/50 border-zinc-100" : "bg-zinc-900/50 border-zinc-900")}>
+        <div className="flex items-center gap-2">
+          <div className={cn("w-2 h-2 rounded-full", theme === 'light' ? "bg-zinc-100" : "bg-white/5")} />
+          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Unstarted</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">In Progress</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-amber-500" />
+          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Awaiting Feedback</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Completed</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Action Required</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QrModal({ onClose, joinUrl, roomCode, className, theme }: { onClose: () => void, joinUrl: string, roomCode: string, className: string, theme: 'light' | 'vs-dark' }) {
   return (
-    <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-2xl transition-colors", theme === 'light' ? "bg-zinc-950/20" : "bg-black/60")}>
+    <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-colors", theme === 'light' ? "bg-zinc-950/20" : "bg-black/60")}>
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 40 }}
         className={cn(
-          "w-full max-w-lg rounded-[3rem] p-12 shadow-[0_50px_100px_rgba(0,0,0,0.3)] relative overflow-hidden border text-center",
+          "w-full max-w-sm rounded-[2.5rem] p-8 shadow-[0_50px_100px_rgba(0,0,0,0.3)] relative overflow-hidden border text-center",
           theme === 'light' ? "bg-white border-zinc-100" : "bg-zinc-950 border-zinc-900"
         )}
       >
-        <div className={cn("absolute top-0 left-0 w-64 h-64 rounded-full blur-[100px] -ml-32 -mt-32 opacity-30", theme === 'light' ? "bg-zinc-100" : "bg-blue-500/20")} />
+        <button 
+          onClick={onClose}
+          className={cn("absolute top-6 right-6 p-2 rounded-xl transition-colors z-20", theme === 'light' ? "text-zinc-400 hover:bg-zinc-100" : "text-zinc-500 hover:bg-white/5")}
+        >
+          <Plus className="w-6 h-6 rotate-45" />
+        </button>
+
+        <div className={cn("absolute top-0 left-0 w-32 h-32 rounded-full blur-[60px] -ml-16 -mt-16 opacity-30", theme === 'light' ? "bg-zinc-100" : "bg-blue-500/20")} />
         
         <div className="relative z-10 flex flex-col items-center">
-          <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-6", theme === 'light' ? "bg-zinc-50 border border-zinc-100" : "bg-white/5 border border-white/10")}>
-            <QrCode className={cn("w-8 h-8", theme === 'light' ? "text-zinc-950" : "text-white")} />
+          <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-6", theme === 'light' ? "bg-zinc-50 border border-zinc-100" : "bg-white/5 border border-white/10")}>
+            <QrCode className={cn("w-6 h-6", theme === 'light' ? "text-zinc-950" : "text-white")} />
           </div>
           
-          <h2 className={cn("text-3xl font-display font-bold tracking-tighter mb-2", theme === 'light' ? "text-zinc-950" : "text-white")}>
+          <h2 className={cn("text-2xl font-display font-bold tracking-tight mb-2", theme === 'light' ? "text-zinc-950" : "text-white")}>
             Join Classroom
           </h2>
-          <p className={cn("text-sm font-medium mb-12", theme === 'light' ? "text-zinc-500" : "text-zinc-400")}>
-            Direct link to {className}
+          <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-8", theme === 'light' ? "text-zinc-500" : "text-zinc-500")}>
+            Protocol Link: {className}
           </p>
 
           <div className={cn(
-            "p-8 rounded-[2.5rem] mb-12 transition-all shadow-2xl",
-            theme === 'light' ? "bg-white border-zinc-100 shadow-zinc-200/50" : "bg-white border-zinc-200 p-8"
+            "p-6 rounded-[2rem] mb-8 transition-all shadow-xl",
+            theme === 'light' ? "bg-white border-zinc-100 shadow-zinc-200/50" : "bg-white border-zinc-200 p-6"
           )}>
             <QRCodeSVG 
               value={joinUrl} 
-              size={240} 
+              size={180} 
               level="H" 
               includeMargin={false}
               fgColor="#000000"
@@ -598,21 +857,11 @@ function QrModal({ onClose, joinUrl, roomCode, className, theme }: { onClose: ()
             />
           </div>
 
-          <div className="space-y-6 w-full">
-            <div className={cn("p-6 rounded-2xl border", theme === 'light' ? "bg-zinc-50 border-zinc-100" : "bg-white/5 border-white/5")}>
-              <p className={cn("text-[9px] font-black uppercase tracking-[0.2em] mb-2", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Manual Entry Protocol</p>
-              <p className={cn("text-2xl font-mono font-bold tracking-[0.3em]", theme === 'light' ? "text-zinc-950" : "text-white")}>{roomCode}</p>
+          <div className="space-y-4 w-full">
+            <div className={cn("p-4 rounded-xl border", theme === 'light' ? "bg-zinc-50 border-zinc-100" : "bg-white/5 border-white/5")}>
+              <p className={cn("text-[8px] font-black uppercase tracking-[0.2em] mb-1.5", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Manual Protocol Code</p>
+              <p className={cn("text-xl font-mono font-bold tracking-[0.3em]", theme === 'light' ? "text-zinc-950" : "text-white")}>{roomCode}</p>
             </div>
-
-            <Button 
-              onClick={onClose}
-              className={cn(
-                "w-full h-14 rounded-2xl font-bold tracking-tight text-base",
-                theme === 'light' ? "bg-zinc-950 text-white hover:bg-zinc-900" : "bg-white text-zinc-950 hover:bg-zinc-100"
-              )}
-            >
-              Close Connection
-            </Button>
           </div>
         </div>
       </motion.div>
@@ -641,10 +890,9 @@ function TabButton({ active, onClick, icon, label, theme }: { active: boolean, o
 
 interface SubmissionCardProps {
   sub: Submission;
-  classroomId: string;
 }
 
-function SubmissionCard({ sub, classroomId, theme }: SubmissionCardProps & { theme: 'light' | 'vs-dark' }) {
+function SubmissionCard({ sub, theme }: SubmissionCardProps & { theme: 'light' | 'vs-dark' }) {
   const [feedback, setFeedback] = useState(sub.feedback || '');
   const [updating, setUpdating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -652,12 +900,17 @@ function SubmissionCard({ sub, classroomId, theme }: SubmissionCardProps & { the
   const handleUpdateStatus = async (status: 'correct' | 'incorrect') => {
     setUpdating(true);
     try {
-      await updateDoc(doc(db, 'classes', classroomId, 'submissions', sub.id), {
-        status,
-        feedback
-      });
+      const { error } = await supabase
+        .from('submissions')
+        .update({
+          status,
+          feedback
+        })
+        .eq('id', sub.id);
+      
+      if (error) throw error;
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `classes/${classroomId}/submissions/${sub.id}`);
+      console.error('Failed to update submission:', err);
     } finally {
       setUpdating(false);
     }
@@ -807,19 +1060,31 @@ function UploadResourceModal({ onClose, classroomId, theme }: { onClose: () => v
     if (!file) return;
     setLoading(true);
     try {
-      const storageRef = ref(storage, `classes/${classroomId}/resources/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
+      const fileName = `${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('materials')
+        .upload(`resources/${fileName}`, file);
 
-      await addDoc(collection(db, 'classes', classroomId, 'resources'), {
-        name: name || file.name,
-        url,
-        type: file.type,
-        createdAt: new Date().toISOString()
-      });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('materials')
+        .getPublicUrl(`resources/${fileName}`);
+
+      const { error: dbError } = await supabase
+        .from('resources')
+        .insert({
+          classroom_id: classroomId,
+          name: name || file.name,
+          url: publicUrl,
+          type: file.type
+        });
+
+      if (dbError) throw dbError;
       onClose();
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, `classes/${classroomId}/resources`);
+    } catch (err: unknown) {
+      console.error('Upload failed:', err);
+      alert(err instanceof Error ? err.message : 'Upload failed. Ensure you have created a "materials" bucket in Supabase Storage with public access.');
     } finally {
       setLoading(false);
     }
@@ -921,30 +1186,46 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
       let instructionsUrl = problem?.instructionsUrl || '';
       
       if (pdfFile) {
-        const storageRef = ref(storage, `classes/${classroomId}/problems/${Date.now()}_${pdfFile.name}`);
-        const snapshot = await uploadBytes(storageRef, pdfFile);
-        instructionsUrl = await getDownloadURL(snapshot.ref);
+        const fileName = `${Date.now()}_${pdfFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('materials')
+          .upload(`problems/${fileName}`, pdfFile);
+        
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('materials')
+          .getPublicUrl(`problems/${fileName}`);
+        
+        instructionsUrl = publicUrl;
       }
 
-      const data = {
+      const problemData = {
+        classroom_id: classroomId,
         title,
         description: desc,
         language: lang,
         type,
-        instructionsUrl,
-        starterCode,
-        createdAt: problem?.createdAt || new Date().toISOString()
+        instructions_url: instructionsUrl,
+        starter_code: starterCode
       };
 
       if (problem) {
-        await updateDoc(doc(db, 'classes', classroomId, 'problems', problem.id), data);
+        const { error } = await supabase
+          .from('problems')
+          .update(problemData)
+          .eq('id', problem.id);
+        if (error) throw error;
       } else {
-        await addDoc(collection(db, 'classes', classroomId, 'problems'), data);
+        const { error } = await supabase
+          .from('problems')
+          .insert(problemData);
+        if (error) throw error;
       }
       onClose();
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `classes/${classroomId}/problems`);
-      alert('Operation failed');
+    } catch (err: unknown) {
+      console.error('Operation failed:', err);
+      alert(err instanceof Error ? err.message : 'Operation failed');
     } finally {
       setLoading(false);
     }

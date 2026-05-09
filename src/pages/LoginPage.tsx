@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Code2, ArrowRight } from 'lucide-react';
@@ -16,15 +14,36 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        navigate('/dashboard');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Failed to login');
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (loginError) throw loginError;
+      if (data.user) {
+        navigate('/dashboard');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to login';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -34,25 +53,44 @@ export default function LoginPage() {
     setGoogleLoading(true);
     setError('');
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const { data, error: googleError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          skipBrowserRedirect: true
+        }
+      });
+      if (googleError) throw googleError;
 
-      // Check if user exists in Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        // If user doesn't exist, they should technically register
-        // But for a smoother flow, we'll create a default student profile if it's a first-time Google login
-        // Alternatively, redirect to register with their info pre-filled
-        setError('No account found for this Google email. Please register first.');
-        // Or if you want to be more flexible:
-        // await setDoc(doc(db, 'users', user.uid), { ... });
-      } else {
-        navigate('/dashboard');
+      if (data?.url) {
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        
+        const popup = window.open(
+          data.url,
+          'google_login_popup',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+
+        if (!popup) {
+          setError('Popup blocked! Please allow popups for this site.');
+          setGoogleLoading(false);
+          return;
+        }
+
+        // Poll to check if popup is closed
+        const pollTimer = window.setInterval(() => {
+          if (popup.closed) {
+            window.clearInterval(pollTimer);
+            setGoogleLoading(false);
+          }
+        }, 1000);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to login with Google');
-    } finally {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to login with Google';
+      setError(message);
       setGoogleLoading(false);
     }
   };
