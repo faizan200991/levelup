@@ -176,5 +176,55 @@ service cloud.firestore {
         allow write: if isOwner(studentId);
       }
     }
+
+    // 3. Peer Hub Posts
+    match /posts/{postId} {
+      function isValidPost(data) {
+        return data.authorId == request.auth.uid &&
+               data.authorName is string &&
+               data.authorAvatar is string &&
+               data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
+               data.likesCount is number &&
+               data.hasImage is bool &&
+               (data.get('imageUrl', null) == null || data.imageUrl is string) &&
+               data.createdAt is string;
+      }
+
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidPost(incoming()) && incoming().likesCount == 0;
+      allow update: if isSignedIn() && (
+        // Author updating content
+        (existing().authorId == request.auth.uid && isValidPost(incoming()) && 
+         incoming().authorId == existing().authorId &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['content', 'hasImage', 'imageUrl'])) ||
+        // Like count increment/decrement
+        (isValidPost(incoming()) && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['likesCount']) &&
+         math.abs(incoming().likesCount - existing().likesCount) <= 1 &&
+         incoming().authorId == existing().authorId &&
+         incoming().content == existing().content)
+      );
+      allow delete: if isSignedIn() && (existing().authorId == request.auth.uid);
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        function isValidComment(data) {
+          return data.postId == postId &&
+                 data.authorId == request.auth.uid &&
+                 data.authorName is string &&
+                 data.content is string && data.content.size() > 0 && data.content.size() <= 1000 &&
+                 data.createdAt is string;
+        }
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && isValidComment(incoming());
+        allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+      }
+
+      // Likes subcollection (presence indicates like)
+      match /likes/{userId} {
+        allow read: if isSignedIn();
+        allow write: if isOwner(userId);
+      }
+    }
   }
 }

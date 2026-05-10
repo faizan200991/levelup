@@ -206,6 +206,18 @@ export default function Dashboard() {
   }, [user, profile, searchParams, joining, handleJoinClass]);
 
 
+  const momentumQuote = React.useMemo(() => {
+    const quotes = [
+      { text: "Consistency is more important than perfection.", author: "Coding Wisdom" },
+      { text: "Small progress is still progress.", author: "Dev Mentor" },
+      { text: "The secret to getting ahead is getting started.", author: "Mark Twain" },
+      { text: "Every great developer you know got there by solving problems they were unqualified to solve.", author: "Patrick McKenzie" },
+      { text: "Code is like humor. When you have to explain it, it’s bad.", author: "Cory House" }
+    ];
+    // eslint-disable-next-line react-hooks/purity
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }, []);
+
   if (loading) return <Loader fullScreen />;
 
   return (
@@ -223,6 +235,18 @@ export default function Dashboard() {
           <p className="text-zinc-600 mt-4 text-base font-medium tracking-tight">
             Welcome back, <span className="text-black font-bold">{profile?.name || user?.user_metadata?.name || 'Student'}</span>
           </p>
+          
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-6 flex items-center gap-4 group cursor-default"
+          >
+             <div className="w-1 h-8 bg-blue-600/20 group-hover:bg-blue-600 transition-all duration-700" />
+             <div>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">DAILY MOMENTUM</p>
+                <p className="text-xs font-medium text-zinc-500 italic">"{momentumQuote.text}" — {momentumQuote.author}</p>
+             </div>
+          </motion.div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -303,12 +327,12 @@ export default function Dashboard() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.1 * idx, duration: 0.5 }}
-                      className="group bg-white p-8 rounded-3xl border border-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-all duration-300 relative overflow-hidden h-full flex flex-col"
+                      className="group bg-white p-6 rounded-2xl border border-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-all duration-300 relative overflow-hidden h-full flex flex-col"
                     >
                       {/* Class content same as before ... */}
-                      <div className="flex justify-between items-start mb-10 relative z-10">
+                      <div className="flex justify-between items-start mb-6 relative z-10">
                         <div className={cn(
-                          "w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-zinc-100 p-2",
+                          "w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-zinc-100 p-2",
                         )}>
                           {cls.language ? (
                             <img 
@@ -329,7 +353,7 @@ export default function Dashboard() {
                       </div>
                       
                       <div className="mt-auto relative z-10">
-                        <h3 className="font-display font-bold text-2xl text-black tracking-tighter mb-4 leading-none">
+                        <h3 className="font-display font-bold text-xl text-black tracking-tighter mb-3 leading-none">
                           {cls.className}
                         </h3>
                         <div className="flex items-center gap-4 text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">
@@ -368,13 +392,13 @@ export default function Dashboard() {
                RECENT_UPDATES
             </h2>
             
-            <div className="bg-white rounded-[3.5rem] border border-zinc-100 overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.04)] relative">
+            <div className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.04)] relative">
               <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 z-10" />
               
               {activities.length === 0 ? (
-                <div className="p-20 text-center">
-                  <div className="bg-zinc-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-8">
-                    <Activity className="w-10 h-10 text-zinc-100" />
+                <div className="p-16 text-center">
+                  <div className="bg-zinc-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Activity className="w-8 h-8 text-zinc-100" />
                   </div>
                   <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em]">No updates yet</p>
                 </div>
@@ -389,11 +413,11 @@ export default function Dashboard() {
                     >
                       <Link 
                         to={`/classroom/${act.classId}`}
-                        className="block p-8 hover:bg-blue-50/10 transition-all duration-500 group"
+                        className="block p-6 hover:bg-blue-50/10 transition-all duration-500 group"
                       >
-                        <div className="flex gap-6">
+                        <div className="flex gap-4">
                           <div className={cn(
-                            "w-16 h-16 rounded-3xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 relative shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3 p-3",
+                            "w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 relative shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3 p-3",
                           )}>
                             {act.type === 'problem' && (
                               <>
@@ -443,11 +467,11 @@ export default function Dashboard() {
               )}
             </div>
             
-            <div className="mt-10 p-10 bg-blue-600 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000" />
-               <h4 className="text-[10px] font-black text-white/60 uppercase tracking-[0.4em] mb-4">WELCOME TO LEVELUP</h4>
-               <p className="text-white text-sm font-medium leading-relaxed">We're glad to have you here! Use your dashboard to stay updated on your classes and new programming projects.</p>
-               <div className="mt-8 flex items-center gap-3">
+            <div className="mt-8 p-8 bg-blue-600 rounded-[2rem] shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-1000" />
+               <h4 className="text-[10px] font-black text-white/60 uppercase tracking-[0.4em] mb-3">WELCOME TO LEVELUP</h4>
+               <p className="text-white text-xs font-medium leading-relaxed">We're glad to have you here! Use your dashboard to stay updated on your classes and new programming projects.</p>
+               <div className="mt-6 flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Everything is running smoothly</span>
                </div>
@@ -472,14 +496,14 @@ function StatCard({ icon, label, value, color, delay = 0 }: { icon: React.ReactN
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-white p-6 rounded-[2.5rem] border border-zinc-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-6 group hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] transition-all duration-500"
+      className="bg-white p-4 md:p-5 rounded-2xl border border-zinc-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-4 group hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] transition-all duration-500"
     >
-      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3", colorClasses)}>
+      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3", colorClasses)}>
         {icon}
       </div>
       <div>
         <p className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em]">{label}</p>
-        <p className="text-xl font-display font-bold text-black mt-0.5 tracking-tight">{value}</p>
+        <p className="text-lg font-display font-bold text-black mt-0.5 tracking-tight">{value}</p>
       </div>
     </motion.div>
   );
