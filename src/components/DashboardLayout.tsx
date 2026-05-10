@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import { Menu, Code2 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import NotificationPopover from './NotificationPopover';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -36,19 +37,27 @@ export default function DashboardLayout({ children, theme = 'light' }: LayoutPro
           </div>
           <span className="font-display font-bold tracking-tight text-lg text-white">LEVELUP</span>
         </div>
-        <button 
-          onClick={() => setIsSidebarOpen(true)}
-          className="p-2 transition-colors text-zinc-400 hover:text-white"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationPopover />
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 transition-colors text-zinc-400 hover:text-white"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
       </header>
 
       <main className={cn(
-        "flex-1 transition-all duration-300",
+        "flex-1 transition-all duration-300 relative",
         isCollapsed ? "lg:ml-20" : "lg:ml-64"
       )}>
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        {/* Desktop Top Actions */}
+        <div className="hidden lg:flex absolute top-6 right-8 z-20">
+          <NotificationPopover />
+        </div>
+
+        <div className="p-4 md:p-6 max-w-7xl mx-auto">
           {children}
         </div>
       </main>

@@ -89,6 +89,35 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "url", "type", "createdAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A public peer-to-peer discussion post",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "hasImage": { "type": "boolean" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "authorName", "content", "likesCount", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A reply to a peer hub post",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "authorId", "authorName", "content", "createdAt"]
     }
   },
   "firestore": {
@@ -115,6 +144,18 @@
     "/classes/{classId}/liveCode/{studentId}": {
       "schema": "LiveCode",
       "description": "Live code snapshots for teachers to monitor"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Public community posts"
+    },
+    "/posts/{postId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments on community posts"
+    },
+    "/posts/{postId}/likes/{userId}": {
+      "schema": { "type": "object", "properties": { "likedAt": { "type": "string", "format": "date-time" } } },
+      "description": "Tracking likes per user"
     }
   }
 }

@@ -14,6 +14,8 @@ import Classroom from './pages/Classroom';
 import CreateClassroom from './pages/CreateClassroom';
 import ProfilePage from './pages/ProfilePage';
 import AITutor from './pages/AITutor';
+import PeerHub from './pages/PeerHub';
+import Notifications from './pages/Notifications';
 import AuthCallback from './pages/AuthCallback';
 import Loader from './components/Loader';
 
@@ -60,10 +62,18 @@ export default function App() {
           element={user ? <AITutor /> : <Navigate to="/login" replace />} 
         />
         <Route 
+          path="/peer-hub" 
+          element={user ? <PeerHub /> : <Navigate to="/login" replace />} 
+        />
+        <Route 
           path="/profile/:uid" 
           element={user ? <ProfilePage /> : <Navigate to="/login" replace />} 
         />
         
+        <Route 
+          path="/notifications" 
+          element={user ? <Notifications /> : <Navigate to="/login" replace />} 
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

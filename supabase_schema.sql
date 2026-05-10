@@ -7,12 +7,12 @@ CREATE TABLE profiles (
   role TEXT CHECK (role IN ('teacher', 'student')),
   photo_url TEXT,
   bio TEXT,
-  learning_path TEXT DEFAULT 'Software Engineer',
-  learning_path_subtitle TEXT DEFAULT 'Mastering Web Development & Databases',
-  location TEXT DEFAULT 'Global Remote',
-  location_subtitle TEXT DEFAULT 'Learning across borders',
-  class_status TEXT DEFAULT 'Active Member',
-  class_status_subtitle TEXT DEFAULT 'Engaging in collaborative classrooms',
+  learning_path TEXT,
+  learning_path_subtitle TEXT,
+  location TEXT,
+  location_subtitle TEXT,
+  class_status TEXT,
+  class_status_subtitle TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   last_active TIMESTAMPTZ DEFAULT NOW()
 );
@@ -176,12 +176,117 @@ ALTER PUBLICATION supabase_realtime ADD TABLE submissions;
 ALTER PUBLICATION supabase_realtime ADD TABLE live_sessions;
 ALTER PUBLICATION supabase_realtime ADD TABLE resources;
 
--- 11. STORAGE BUCKET SETUP
--- Note: Create a bucket named 'materials' in the Supabase Storage Dashboard.
--- Set the bucket to 'Public' or add suitable RLS policies for public read:
--- 1. policy: "Allow public read"
---    - definition: (bucket_id = 'materials'::text)
---    - allow for: SELECT
--- 2. policy: "Allow authenticated upload"
---    - definition: (bucket_id = 'materials'::text) AND (auth.role() = 'authenticated'::text)
---    - allow for: INSERT, UPDATE, DELETE
+-- Hub and Social Features
+CREATE TABLE posts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  author_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  author_name TEXT NOT NULL,
+  author_avatar TEXT,
+  content TEXT NOT NULL,
+  likes_count INT DEFAULT 0,
+  has_image BOOLEAN DEFAULT FALSE,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE NOT NULL,
+  author_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  author_name TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE post_likes (
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (post_id, user_id)
+);
+
+CREATE TABLE follows (
+  follower_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  following_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (follower_id, following_id)
+);
+
+ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Posts are viewable by everyone." ON posts FOR SELECT USING (true);
+CREATE POLICY "Users can create posts." ON posts FOR INSERT WITH CHECK (auth.uid() = author_id);
+CREATE POLICY "Users can update/delete own posts." ON posts FOR ALL USING (auth.uid() = author_id);
+CREATE POLICY "Users can also update like counts on any post." ON posts FOR UPDATE USING (true);
+
+CREATE POLICY "Comments are viewable by everyone." ON comments FOR SELECT USING (true);
+CREATE POLICY "Users can create comments." ON comments FOR INSERT WITH CHECK (auth.uid() = author_id);
+CREATE POLICY "Users can delete own comments." ON comments FOR DELETE USING (auth.uid() = author_id);
+
+CREATE POLICY "Likes are viewable by everyone." ON post_likes FOR SELECT USING (true);
+CREATE POLICY "Users can toggle own likes." ON post_likes FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Follows are viewable by everyone." ON follows FOR SELECT USING (true);
+CREATE POLICY "Users can manage own follows." ON follows FOR ALL USING (auth.uid() = follower_id);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE posts;
+ALTER PUBLICATION supabase_realtime ADD TABLE comments;
+ALTER PUBLICATION supabase_realtime ADD TABLE post_likes;
+ALTER PUBLICATION supabase_realtime ADD TABLE follows;
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
+-- 12. Notifications table
+CREATE TABLE notifications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  actor_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  actor_name TEXT NOT NULL,
+  actor_avatar TEXT,
+  type TEXT CHECK (type IN ('like', 'comment', 'follow', 'submission', 'feedback')),
+  content TEXT,
+  resource_id UUID,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own notifications." ON notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can create notifications for others." ON notifications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update own notifications." ON notifications FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own notifications." ON notifications FOR DELETE USING (auth.uid() = user_id);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+-- ==========================================
+-- 1. Create the bucket
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('materials', 'materials', true) 
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Enable RLS on storage.objects (usually enabled by default)
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- 3. Add policies for the 'materials' bucket
+-- Allow public read access to 'materials' bucket
+CREATE POLICY "Public Read Access"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'materials' );
+
+-- Allow authenticated users to upload to 'materials' bucket
+CREATE POLICY "Authenticated Upload Access"
+ON storage.objects FOR INSERT
+WITH CHECK ( 
+  bucket_id = 'materials' 
+  AND auth.role() = 'authenticated' 
+);
+
+-- Allow users to update/delete their own uploads in 'materials' bucket
+CREATE POLICY "Owner Update/Delete Access"
+ON storage.objects FOR ALL
+USING ( 
+  bucket_id = 'materials' 
+  AND auth.uid() = owner 
+);

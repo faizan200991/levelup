@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Editor } from '@monaco-editor/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { ClassRoom, Problem, Submission, Resource, UserProfile } from '../types';
 import { Button } from '../components/Button';
-import { Link } from 'react-router-dom';
 import { cn, getLanguageIcon } from '../lib/utils';
 import { 
   Play, 
@@ -14,18 +14,33 @@ import {
   XCircle, 
   FileText, 
   Sparkles,
+  User,
   ExternalLink,
   Monitor,
   Sun,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Trophy,
+  Flame,
+  Star,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+interface LeaderboardItem {
+  id: string;
+  name: string;
+  avatar: string | null;
+  xp: number;
+  level: number;
+  isSelf: boolean;
+}
 
 export default function StudentClassroom({ 
   classroom, 
@@ -36,6 +51,7 @@ export default function StudentClassroom({
   theme: 'vs-dark' | 'light',
   setTheme: (t: 'vs-dark' | 'light') => void 
 }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [problems, setProblems] = useState<Problem[]>([]);
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
@@ -45,9 +61,34 @@ export default function StudentClassroom({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
-  const [activePanel, setActivePanel] = useState<'problem' | 'resources'>('problem');
+  const [activePanel, setActivePanel] = useState<'problem' | 'resources' | 'leaderboard'>('problem');
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [teacherProfile, setTeacherProfile] = useState<UserProfile | null>(null);
+  const [xp, setXp] = useState(1250);
+  const [level, setLevel] = useState(12);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+
+  useEffect(() => {
+    async function fetchLeaderboard() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, name, photo_url, xp, level')
+        .order('xp', { ascending: false })
+        .limit(5);
+      
+      if (data) {
+        setLeaderboard(data.map(d => ({
+          id: d.id,
+          name: d.name,
+          xp: d.xp || 0,
+          level: d.level || 1,
+          avatar: d.photo_url || null,
+          isSelf: d.id === user?.id
+        })));
+      }
+    }
+    fetchLeaderboard();
+  }, [user]);
   
   const lastSyncRef = useRef<number>(0);
 
@@ -79,6 +120,49 @@ export default function StudentClassroom({
     };
     fetchTeacher();
   }, [classroom.teacherId]);
+
+  const [activeUsers, setActiveUsers] = useState<{ id: string; name: string; photoURL: string }[]>([]);
+
+  useEffect(() => {
+    const fetchActiveUsers = async () => {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from('live_sessions')
+        .select('student_id, profiles(name, photo_url)')
+        .eq('classroom_id', classroom.id)
+        .gt('last_updated', fiveMinutesAgo);
+      
+      if (data) {
+        const uniqueUsers = Array.from(new Set(data.map(d => d.student_id)))
+          .map(id => {
+            const userSnap = data.find(d => d.student_id === id);
+            const profile = userSnap?.profiles as unknown as { name: string; photo_url: string } | null;
+            return {
+              id,
+              name: profile?.name || 'Peer',
+              photoURL: profile?.photo_url || ''
+            };
+          })
+          .filter(u => u.id !== user?.id);
+        setActiveUsers(uniqueUsers);
+      }
+    };
+
+    fetchActiveUsers();
+    const interval = setInterval(fetchActiveUsers, 30000); // Update every 30s
+
+    const liveSub = supabase
+      .channel('live_users_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sessions', filter: `classroom_id=eq.${classroom.id}` }, () => {
+        fetchActiveUsers();
+      })
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      liveSub.unsubscribe();
+    };
+  }, [classroom.id, user?.id]);
 
   useEffect(() => {
     // Initial fetch and subscription for problems
@@ -205,6 +289,42 @@ export default function StudentClassroom({
     return () => clearTimeout(timeout);
   }, [code, user, selectedProblem, classroom.id]);
 
+  const [isGettingHint, setIsGettingHint] = useState(false);
+
+  const handleGetHint = async () => {
+    if (!selectedProblem || !code) return;
+    setIsGettingHint(true);
+    try {
+      const { GoogleGenAI } = await import('@google/genai');
+      const aiToken = (process.env as unknown as { GEMINI_API_KEY: string }).GEMINI_API_KEY || '';
+      const ai = new GoogleGenAI({ apiKey: aiToken });
+      
+      const prompt = `You are a helpful coding tutor. A student is working on the following problem and is stuck.
+Problem Title: ${selectedProblem.title}
+Problem Description: ${selectedProblem.description}
+Student's Current Code (${selectedProblem.language}):
+${code}
+
+Please provide a helpful, encouraging hint. Do NOT give the full solution. Focus on pointing out logic errors, suggesting a next step, or explaining a concept they might be missing. Keep it concise.`;
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [{ parts: [{ text: prompt }] }],
+      });
+      
+      const hint = result.text || "I'm sorry, I couldn't think of a hint right now. Try reviewing the problem requirements!";
+      
+      // Add hint to the console output area
+      setOutput(prev => `[AI TUTOR HINT]\n${hint}\n\n${prev}`);
+      setActivePanel('problem'); // Ensure they see the description/log area if needed, but we put it in output
+    } catch (err) {
+      console.error('AI Hint Error:', err);
+      setOutput(prev => `[AI Error] Could not get a hint. ${prev}`);
+    } finally {
+      setIsGettingHint(false);
+    }
+  };
+
   const handleRun = async () => {
     if (!selectedProblem || !code) return;
     setIsRunning(true);
@@ -271,10 +391,44 @@ export default function StudentClassroom({
         });
       
       if (error) throw error;
-      alert('Submission received!');
+      
+      // Notification for teacher
+      const { data: profile } = await supabase.from('profiles').select('name, photo_url').eq('id', user.id).single();
+      await supabase.from('notifications').insert({
+        user_id: classroom.teacherId, // Notify the teacher
+        actor_id: user.id,
+        actor_name: profile?.name || user.email?.split('@')[0] || 'Anonymous',
+        actor_avatar: profile?.photo_url || user.id,
+        type: 'comment', // Reusing 'comment' icon for submission for now, or I could add 'submission' type
+        content: `submitted ${selectedProblem.title} in ${classroom.className}`,
+        resource_id: classroom.id
+      });
+
+      // Celebration & Gamification
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#3b82f6', '#10b981', '#f59e0b']
+      });
+      
+      setXp(prev => prev + 150);
+      if (xp + 150 >= 1500) {
+        setLevel(prev => prev + 1);
+        setXp(0);
+        // Level up special effect
+        setTimeout(() => {
+          confetti({
+            particleCount: 400,
+            spread: 160,
+            origin: { y: 0.5 },
+            colors: ['#FFD700', '#FFA500']
+          });
+        }, 500);
+      }
+
     } catch (err) {
       console.error('Submission failed:', err);
-      alert('Submission failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -287,7 +441,7 @@ export default function StudentClassroom({
     )}>
       {/* Premium Header */}
       <header className={cn(
-        "h-16 backdrop-blur-3xl border-b px-6 flex items-center justify-between relative z-50 transition-all",
+        "h-14 backdrop-blur-3xl border-b px-6 flex items-center justify-between relative z-50 transition-all",
         theme === 'light' ? "bg-white/80 border-zinc-200" : "bg-zinc-950/80 border-zinc-900"
       )}>
         <div className="flex items-center gap-4">
@@ -326,6 +480,29 @@ export default function StudentClassroom({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* XP & Level Indicator */}
+          <div className={cn(
+            "flex items-center gap-4 px-4 py-1.5 rounded-2xl border transition-all",
+            theme === 'light' ? "bg-white border-zinc-200" : "bg-zinc-900 border-zinc-800"
+          )}>
+            <div className="flex flex-col items-end">
+              <span className={cn("text-[9px] font-black uppercase tracking-[0.2em] opacity-50", theme === 'light' ? "text-zinc-600" : "text-zinc-400")}>LVL {level}</span>
+              <div className={cn("w-20 h-1 rounded-full overflow-hidden mt-1", theme === 'light' ? "bg-zinc-100" : "bg-zinc-950")}>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(xp / 1500) * 100}%` }}
+                  className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+                />
+              </div>
+            </div>
+            <div className={cn(
+              "w-8 h-8 rounded-xl flex items-center justify-center border shadow-inner",
+              theme === 'light' ? "bg-zinc-50 border-zinc-100" : "bg-zinc-950 border-zinc-800"
+            )}>
+              <Flame className="w-4 h-4 text-orange-500" />
+            </div>
+          </div>
+
           <div className={cn(
             "flex items-center gap-1 rounded-lg p-1 border transition-all",
             theme === 'light' ? "bg-zinc-100 border-zinc-200" : "bg-zinc-900 border-zinc-800"
@@ -364,9 +541,20 @@ export default function StudentClassroom({
             <Button 
               size="sm" 
               variant="ghost" 
+              onClick={handleGetHint} 
+              isLoading={isGettingHint}
+              className="text-amber-500 hover:bg-amber-500/10 rounded-xl transition-all h-8"
+              title="Get a hint from AI"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-2" /> Hint
+            </Button>
+            <div className={cn("w-px h-4 mx-1", theme === 'light' ? "bg-zinc-200" : "bg-zinc-800")} />
+            <Button 
+              size="sm" 
+              variant="ghost" 
               onClick={handleRun} 
               isLoading={isRunning}
-              className="text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all h-9"
+              className="text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all h-8"
             >
               <Play className="w-3.5 h-3.5 mr-2 fill-emerald-500" /> Run
             </Button>
@@ -375,7 +563,7 @@ export default function StudentClassroom({
               onClick={handleSubmit} 
               isLoading={isSubmitting}
               className={cn(
-                "rounded-xl font-black uppercase text-[10px] tracking-widest h-9 px-6 shadow-2xl transition-all",
+                "rounded-lg font-black uppercase text-[10px] tracking-widest h-8 px-4 shadow-2xl transition-all",
                 theme === 'light' ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200" : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-900/40"
               )}
             >
@@ -390,7 +578,7 @@ export default function StudentClassroom({
         <motion.div 
           initial={false}
           animate={{ 
-            width: isSidebarVisible ? 440 : 0,
+            width: isSidebarVisible ? 380 : 0,
             opacity: isSidebarVisible ? 1 : 0,
             x: isSidebarVisible ? 0 : -20
           }}
@@ -404,8 +592,8 @@ export default function StudentClassroom({
             theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950 border-zinc-900"
           )}
         >
-          <div className="w-[440px] flex flex-col h-full"> 
-            <div className="p-6 pb-4 flex gap-4">
+          <div className="w-[380px] flex flex-col h-full"> 
+            <div className="p-4 pb-2 flex gap-3">
                   <button 
                     onClick={() => setActivePanel('problem')}
                     className={cn(
@@ -422,6 +610,24 @@ export default function StudentClassroom({
                         theme === 'light' ? "bg-white border-zinc-200 shadow-zinc-200" : "bg-white/5 border-white/10 shadow-white/5"
                       )} />
                     )}
+                  </button>
+                  <button 
+                    onClick={() => setActivePanel('leaderboard')}
+                    className={cn(
+                      "flex-1 h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden flex items-center justify-center gap-2",
+                      activePanel === 'leaderboard' 
+                        ? (theme === 'light' ? "text-zinc-950" : "text-white") 
+                        : "text-zinc-500 hover:text-zinc-400"
+                    )}
+                  >
+                    Hall of Fame
+                    {activePanel === 'leaderboard' && (
+                      <motion.div layoutId="panel-active" className={cn(
+                        "absolute inset-0 border -z-10 rounded-xl shadow-inner",
+                        theme === 'light' ? "bg-white border-zinc-200 shadow-zinc-200" : "bg-white/5 border-white/10 shadow-white/5"
+                      )} />
+                    )}
+                    <Trophy className={cn("w-3 h-3 transition-colors", activePanel === 'leaderboard' ? "text-yellow-500" : "opacity-30")} />
                   </button>
                   <button 
                     onClick={() => setActivePanel('resources')}
@@ -466,7 +672,7 @@ export default function StudentClassroom({
                           setCode(p.starterCode || getDefaultCode(p.language));
                         }}
                         className={cn(
-                          "w-full p-4 rounded-3xl border text-left transition-all group relative overflow-hidden",
+                          "w-full p-3.5 rounded-2xl border text-left transition-all group relative overflow-hidden",
                           selectedProblem?.id === p.id 
                             ? (theme === 'light' ? "bg-zinc-950 border-black shadow-xl" : "bg-white border-white shadow-[0_0_40px_rgba(255,255,255,0.1)]")
                             : (theme === 'light' ? "bg-white border-zinc-200 hover:border-zinc-400" : "bg-zinc-900 border-zinc-800 hover:border-zinc-700")
@@ -474,7 +680,7 @@ export default function StudentClassroom({
                       >
                         <div className="flex items-center gap-4 relative z-10 transition-transform duration-500 group-hover:translate-x-1">
                           <div className={cn(
-                            "w-10 h-10 rounded-xl border flex items-center justify-center p-2 transition-all",
+                            "w-8 h-8 rounded-xl border flex items-center justify-center p-1.5 transition-all",
                             selectedProblem?.id === p.id 
                               ? (theme === 'light' ? "bg-white border-zinc-200 text-zinc-950" : "bg-black border-zinc-800 text-white") 
                               : (theme === 'light' ? "bg-zinc-50 border-zinc-100 text-zinc-950" : "bg-zinc-950 border-zinc-800 text-white")
@@ -499,10 +705,10 @@ export default function StudentClassroom({
                   </div>
 
                   {selectedProblem && (
-                    <div className="pt-8 border-t border-zinc-100 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h2 className={cn("text-2xl font-display font-bold tracking-tight leading-tight", theme === 'light' ? "text-black" : "text-white")}>{selectedProblem.title}</h2>
+                      <div className="pt-6 border-t border-zinc-100 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h2 className={cn("text-xl font-display font-bold tracking-tight leading-tight", theme === 'light' ? "text-black" : "text-white")}>{selectedProblem.title}</h2>
                           <div className={cn(
                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-2xl",
                             selectedProblem.type === 'assignment' 
@@ -515,7 +721,7 @@ export default function StudentClassroom({
 
                       {teacherProfile && (
                         <Link to={`/profile/${teacherProfile.uid}`}>
-                          <div className={cn("flex items-center gap-3 p-3 rounded-2xl border transition-all hover:border-blue-600 hover:shadow-lg group/teacher cursor-pointer", theme === 'light' ? "bg-zinc-100 border-zinc-200" : "bg-white/5 border-white/10")}>
+                          <div className={cn("flex items-center gap-3 p-2.5 rounded-xl border transition-all hover:border-blue-600 hover:shadow-lg group/teacher cursor-pointer", theme === 'light' ? "bg-zinc-100 border-zinc-200" : "bg-white/5 border-white/10")}>
                             <div className={cn("w-8 h-8 rounded-xl overflow-hidden border", theme === 'light' ? "border-zinc-300" : "border-white/10")}>
                               <img 
                                 src={teacherProfile.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${teacherProfile.uid}`} 
@@ -536,13 +742,13 @@ export default function StudentClassroom({
                           target="_blank" 
                           rel="noreferrer"
                           className={cn(
-                            "flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-500 group",
+                            "flex items-center justify-between p-4 rounded-2xl border transition-all duration-500 group",
                             theme === 'light' ? "bg-zinc-50 border-zinc-200 hover:bg-zinc-950 hover:text-white" : "bg-zinc-900 border-zinc-800 hover:bg-white hover:text-zinc-950"
                           )}
                         >
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3">
                             <div className={cn(
-                              "w-12 h-12 rounded-2xl border flex items-center justify-center transition-all",
+                              "w-10 h-10 rounded-xl border flex items-center justify-center transition-all",
                               theme === 'light' ? "bg-white border-zinc-200 group-hover:bg-zinc-950 group-hover:text-white" : "bg-white/5 border-white/10 group-hover:bg-zinc-950 group-hover:text-white"
                             )}>
                               <FileText className="w-5 h-5" />
@@ -650,6 +856,73 @@ export default function StudentClassroom({
                   </div>
                 )}
               </motion.div>
+              ) : activePanel === 'leaderboard' ? (
+                <motion.div
+                  key="leaderboard-panel"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-8 mt-6 pb-20"
+                >
+                  <div>
+                    <h2 className={cn("text-2xl font-display font-bold mb-2 tracking-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>Hall of Fame</h2>
+                    <p className="text-xs font-medium text-zinc-500">The top engineers in this mission.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {leaderboard.map((student, idx) => (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        key={student.id || student.name}
+                        onClick={() => student.id && navigate(`/profile/${student.id}`)}
+                        className={cn(
+                          "p-4 rounded-3xl border flex items-center justify-between group transition-all cursor-pointer",
+                          student.isSelf 
+                            ? (theme === 'light' ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200" : "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-900/40")
+                            : (theme === 'light' ? "bg-white border-zinc-200 hover:border-zinc-400" : "bg-zinc-900 border-zinc-800 hover:border-zinc-700")
+                        )}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs",
+                            student.isSelf ? "bg-white/20 border-white/30 text-white" : (theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950 border-zinc-800")
+                          )}>
+                            {idx + 1}
+                          </div>
+                          <div className="w-10 h-10 rounded-2xl overflow-hidden border border-inherit">
+                             {student.avatar && student.avatar.startsWith('http') ? (
+                               <img src={student.avatar} alt="" className="w-full h-full object-cover" />
+                             ) : (
+                               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.avatar}`} alt="" className="w-full h-full object-cover" />
+                             )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold tracking-tight uppercase">{student.name}</p>
+                            <p className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", student.isSelf ? "text-blue-100" : "")}>LEVEL {student.level}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Star className={cn("w-3 h-3", student.isSelf ? "text-blue-200" : "text-amber-500")} />
+                            <span className="text-xs font-black">{student.xp.toLocaleString()}</span>
+                          </div>
+                          <p className={cn("text-[8px] font-bold uppercase opacity-40", student.isSelf ? "text-blue-100" : "")}>TOTAL XP</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  <div className={cn(
+                    "p-6 rounded-[2rem] border border-dashed flex flex-col items-center text-center",
+                    theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900 border-zinc-800"
+                  )}>
+                    <Award className="w-8 h-8 text-blue-500 mb-3" />
+                    <p className="text-xs font-bold mb-1">Weekly Challenge</p>
+                    <p className={cn("text-[10px] leading-relaxed", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Solve 3 assignments this week to earn the <span className="text-blue-500 font-black">"Speed Coder"</span> badge!</p>
+                  </div>
+                </motion.div>
               ) : (
                 <motion.div
                   key="resources-panel"
@@ -698,6 +971,37 @@ export default function StudentClassroom({
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Active Peers Display */}
+            {activeUsers.length > 0 && (
+               <div className="mt-auto pt-8 border-t border-zinc-100/10">
+                  <p className={cn("text-[9px] font-black uppercase tracking-[0.3em] mb-4 opacity-40 mx-8", theme === 'light' ? "text-zinc-600" : "text-zinc-400")}>Peers Coding Now</p>
+                  <div className="flex flex-wrap gap-2 px-8 pb-8">
+                     {activeUsers.map(peer => (
+                       <div 
+                         key={peer.id}
+                         className={cn(
+                           "flex items-center gap-2 p-1.5 pr-4 rounded-full border transition-all hover:scale-105",
+                           theme === 'light' ? "bg-white border-zinc-100 shadow-sm" : "bg-white/5 border-white/5"
+                         )}
+                         title={`${peer.name} is coding...`}
+                       >
+                         <div className="w-7 h-7 rounded-full overflow-hidden border border-white/10 shrink-0">
+                           {peer.photoURL ? (
+                             <img src={peer.photoURL} alt={peer.name} className="w-full h-full object-cover" />
+                           ) : (
+                             <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+                               <User className="w-4 h-4 text-white" />
+                             </div>
+                           )}
+                         </div>
+                         <span className={cn("text-[10px] font-bold truncate max-w-[90px]", theme === 'light' ? "text-zinc-950" : "text-white")}>{peer.name}</span>
+                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                       </div>
+                     ))}
+                  </div>
+               </div>
+            )}
           </div>
         </div>
         </motion.div>

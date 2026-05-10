@@ -616,7 +616,7 @@ export default function TeacherClassroom({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.05 }}
                     >
-                      <SubmissionCard key={sub.id} sub={sub} theme={theme} />
+                      <SubmissionCard key={sub.id} sub={sub} theme={theme} classroom={classroom} />
                     </motion.div>
                   ))
                 )}
@@ -890,9 +890,10 @@ function TabButton({ active, onClick, icon, label, theme }: { active: boolean, o
 
 interface SubmissionCardProps {
   sub: Submission;
+  classroom: ClassRoom;
 }
 
-function SubmissionCard({ sub, theme }: SubmissionCardProps & { theme: 'light' | 'vs-dark' }) {
+function SubmissionCard({ sub, theme, classroom }: SubmissionCardProps & { theme: 'light' | 'vs-dark' }) {
   const [feedback, setFeedback] = useState(sub.feedback || '');
   const [updating, setUpdating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -909,6 +910,19 @@ function SubmissionCard({ sub, theme }: SubmissionCardProps & { theme: 'light' |
         .eq('id', sub.id);
       
       if (error) throw error;
+
+      // Notify Student
+      const { data: teacherProfile } = await supabase.from('profiles').select('name, photo_url').eq('id', classroom.teacherId).single();
+
+      await supabase.from('notifications').insert({
+        user_id: sub.studentId,
+        actor_id: classroom.teacherId,
+        actor_name: teacherProfile?.name || 'Teacher',
+        actor_avatar: teacherProfile?.photo_url || classroom.teacherId,
+        type: status === 'correct' ? 'follow' : 'comment',
+        content: `graded your ${sub.problemTitle || 'assignment'} as ${status}`,
+        resource_id: classroom.id
+      });
     } catch (err) {
       console.error('Failed to update submission:', err);
     } finally {
@@ -1065,7 +1079,15 @@ function UploadResourceModal({ onClose, classroomId, theme }: { onClose: () => v
         .from('materials')
         .upload(`resources/${fileName}`, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        if (uploadError.message === 'Bucket not found') {
+          throw new Error('Supabase Storage bucket "materials" not found. Please create it in your Supabase dashboard and set it to public.');
+        }
+        if (uploadError.message.includes('row-level security policy')) {
+          throw new Error('Supabase Storage RLS Policy Error: You need to add policies to allow uploads to the "materials" bucket. See supabase_schema.sql for the required SQL.');
+        }
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('materials')
@@ -1191,7 +1213,15 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
           .from('materials')
           .upload(`problems/${fileName}`, pdfFile);
         
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          if (uploadError.message === 'Bucket not found') {
+            throw new Error('Supabase Storage bucket "materials" not found. Please create it in your Supabase dashboard and set it to public.');
+          }
+          if (uploadError.message.includes('row-level security policy')) {
+            throw new Error('Supabase Storage RLS Policy Error: You need to add policies to allow uploads to the "materials" bucket. See supabase_schema.sql for the required SQL.');
+          }
+          throw uploadError;
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('materials')

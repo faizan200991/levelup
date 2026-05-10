@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { User, Mail, Shield, Calendar, Edit3, Camera, MapPin, Code2, ArrowLeft } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Edit3, Camera, MapPin, Code2, ArrowLeft, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile } from '../types';
 import { cn } from '../lib/utils';
@@ -17,6 +17,9 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -26,6 +29,8 @@ export default function ProfilePage() {
   const [locationSubtitle, setLocationSubtitle] = useState('');
   const [classStatus, setClassStatus] = useState('');
   const [classStatusSubtitle, setClassStatusSubtitle] = useState('');
+  const [xp, setXp] = useState(0);
+  const [level, setLevel] = useState(1);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -63,12 +68,14 @@ export default function ProfilePage() {
           setName(data.name);
           setBio(data.bio || '');
           setPhotoURL(data.photo_url || null);
-          setLearningPath(data.learning_path || 'Software Engineer');
-          setLearningPathSubtitle(data.learning_path_subtitle || 'Mastering Web Development & Databases');
-          setLocation(data.location || 'Global Remote');
-          setLocationSubtitle(data.location_subtitle || 'Learning across borders');
-          setClassStatus(data.class_status || 'Active Member');
-          setClassStatusSubtitle(data.class_status_subtitle || 'Engaged in collaborative classrooms');
+          setLearningPath(data.learning_path || '');
+          setLearningPathSubtitle(data.learning_path_subtitle || '');
+          setLocation(data.location || '');
+          setLocationSubtitle(data.location_subtitle || '');
+          setClassStatus(data.class_status || '');
+          setClassStatusSubtitle(data.class_status_subtitle || '');
+          setXp(data.xp || 0);
+          setLevel(data.level || 1);
         } else {
           setError('User not found');
         }
@@ -79,8 +86,36 @@ export default function ProfilePage() {
         setLoading(false);
       }
     }
+    async function fetchFollowStats() {
+      if (!uid) return;
+      const [followers, following, relationship] = await Promise.all([
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', uid),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', uid),
+        user ? supabase.from('follows').select('*').eq('follower_id', user.id).eq('following_id', uid).single() : Promise.resolve({ data: null })
+      ]);
+      setFollowerCount(followers.count || 0);
+      setFollowingCount(following.count || 0);
+      setIsFollowing(!!relationship.data);
+    }
     fetchProfile();
-  }, [uid]);
+    fetchFollowStats();
+  }, [uid, user]);
+
+  const handleFollow = async () => {
+    if (!user || !uid || isOwnProfile) return;
+    try {
+      if (isFollowing) {
+        await supabase.from('follows').delete().match({ follower_id: user.id, following_id: uid });
+        setFollowerCount(prev => Math.max(0, prev - 1));
+      } else {
+        await supabase.from('follows').insert({ follower_id: user.id, following_id: uid });
+        setFollowerCount(prev => prev + 1);
+      }
+      setIsFollowing(!isFollowing);
+    } catch (err) {
+      console.error('Follow action failed:', err);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,7 +130,15 @@ export default function ProfilePage() {
           .from('materials')
           .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          if (uploadError.message === 'Bucket not found') {
+            throw new Error('Supabase Storage bucket "materials" not found. Please create it in your Supabase dashboard and set it to public.');
+          }
+          if (uploadError.message.includes('row-level security policy')) {
+            throw new Error('Supabase Storage RLS Policy Error: You need to add policies to allow uploads to the "materials" bucket. See supabase_schema.sql for the required SQL.');
+          }
+          throw uploadError;
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('materials')
@@ -244,11 +287,11 @@ export default function ProfilePage() {
                         setName(profile.name);
                         setBio(profile.bio || '');
                         setPhotoURL(profile.photoURL || null);
-                        setLearningPath(profile.learningPath || 'Software Engineer');
+                        setLearningPath(profile.learningPath || '');
                         setLearningPathSubtitle(profile.learningPathSubtitle || '');
-                        setLocation(profile.location || 'Global Remote');
+                        setLocation(profile.location || '');
                         setLocationSubtitle(profile.locationSubtitle || '');
-                        setClassStatus(profile.classStatus || 'Active Member');
+                        setClassStatus(profile.classStatus || '');
                         setClassStatusSubtitle(profile.classStatusSubtitle || '');
                       }}
                     >
@@ -326,13 +369,61 @@ export default function ProfilePage() {
                           <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
                             <Calendar className="w-4 h-4" /> Joined {new Date(profile.createdAt).toLocaleDateString()}
                           </div>
+                          <div className={cn(
+                            "flex items-center gap-4 px-4 py-1.5 rounded-2xl border transition-all",
+                            profile.role === 'teacher' ? "bg-blue-50 border-blue-100 text-blue-600" : "bg-orange-50 border-orange-100 text-orange-600 shadow-sm"
+                          )}>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80">LEVEL {level}</span>
+                              <div className="w-20 h-1 rounded-full bg-black/10 overflow-hidden mt-1">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(xp / 1500) * 100}%` }}
+                                  className={cn("h-full shadow-[0_0_10px_rgba(59,130,246,0.3)]", profile.role === 'teacher' ? "bg-blue-500" : "bg-orange-500")}
+                                />
+                              </div>
+                            </div>
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center border shadow-inner",
+                              profile.role === 'teacher' ? "bg-white border-blue-200" : "bg-white border-orange-200"
+                            )}>
+                              <Flame className={cn("w-4 h-4", profile.role === 'teacher' ? "text-blue-500" : "text-orange-500")} />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-zinc-500 pt-2 md:pt-0">
+                            <div className="flex flex-col">
+                              <span className="text-black text-lg">{followingCount}</span>
+                              <span className="text-[8px] opacity-60">Following</span>
+                            </div>
+                            <div className="w-px h-8 bg-zinc-100" />
+                            <div className="flex flex-col">
+                              <span className="text-black text-lg">{followerCount}</span>
+                              <span className="text-[8px] opacity-60">Followers</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                      
+                      {!isOwnProfile && (
+                        <div className="pt-4">
+                          <Button 
+                            onClick={handleFollow}
+                            className={cn(
+                              "h-12 px-10 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all",
+                              isFollowing 
+                                ? "bg-zinc-100 text-zinc-950 hover:bg-zinc-200 border border-zinc-200" 
+                                : "bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-100"
+                            )}
+                          >
+                            {isFollowing ? 'Following' : '+ Follow Peer'}
+                          </Button>
+                        </div>
+                      )}
                       
                       <div className="pt-8 border-t border-zinc-50">
                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Biography</p>
                         <p className="text-xl text-black font-medium leading-relaxed max-w-3xl italic">
-                          {profile.bio || "No biography provided yet. This user is focused on excellence in coding."}
+                          {profile.bio || "This user is focused on excellence in coding."}
                         </p>
                       </div>
                     </motion.div>
@@ -436,20 +527,20 @@ export default function ProfilePage() {
            <ProfileStatCard 
              icon={<Code2 className="w-6 h-6" />}
              label="Learning Path"
-             value={profile.learningPath || "Software Engineer"}
-             description={profile.learningPathSubtitle || "Mastering Web Development & Databases"}
+             value={profile.learningPath || "Not Specified"}
+             description={profile.learningPathSubtitle || "Add your path in settings"}
            />
            <ProfileStatCard 
              icon={<MapPin className="w-6 h-6" />}
              label="Location"
-             value={profile.location || "Global Remote"}
-             description={profile.locationSubtitle || "Learning across borders"}
+             value={profile.location || "Not Specified"}
+             description={profile.locationSubtitle || "Add your location in settings"}
            />
            <ProfileStatCard 
              icon={<Calendar className="w-6 h-6" />}
              label="Class Status"
-             value={profile.classStatus || "Active Member"}
-             description={profile.classStatusSubtitle || "Engaged in collaborative classrooms"}
+             value={profile.classStatus || "Not Specified"}
+             description={profile.classStatusSubtitle || "Update your status in settings"}
            />
         </div>
       </div>
