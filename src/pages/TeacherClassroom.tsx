@@ -249,7 +249,7 @@ export default function TeacherClassroom({
                 className={cn("text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group", theme === 'light' ? "text-zinc-500 hover:text-zinc-950" : "text-zinc-400 hover:text-white")}
               >
                 <QrCode className="w-3 h-3 group-hover:scale-110 transition-transform" />
-                Show QR Protocol
+                Show QR Code
               </button>
             </div>
           </motion.div>
@@ -763,7 +763,7 @@ function ClassHeatmap({ problems, submissions, liveCodes, theme }: { problems: P
                             </div>
                           )}
                           {status === 'correct' && (
-                            <div className="w-4 h-4 rounded-lg bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" title="Protocol Accomplished">
+                            <div className="w-4 h-4 rounded-lg bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]" title="Task Completed">
                               <Check className="w-2.5 h-2.5 text-white m-auto mt-0.5" />
                             </div>
                           )}
@@ -840,7 +840,7 @@ function QrModal({ onClose, joinUrl, roomCode, className, theme }: { onClose: ()
             Join Classroom
           </h2>
           <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-8", theme === 'light' ? "text-zinc-500" : "text-zinc-500")}>
-            Protocol Link: {className}
+            Classroom: {className}
           </p>
 
           <div className={cn(
@@ -859,7 +859,7 @@ function QrModal({ onClose, joinUrl, roomCode, className, theme }: { onClose: ()
 
           <div className="space-y-4 w-full">
             <div className={cn("p-4 rounded-xl border", theme === 'light' ? "bg-zinc-50 border-zinc-100" : "bg-white/5 border-white/5")}>
-              <p className={cn("text-[8px] font-black uppercase tracking-[0.2em] mb-1.5", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Manual Protocol Code</p>
+              <p className={cn("text-[8px] font-black uppercase tracking-[0.2em] mb-1.5", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Manual Invitation Code</p>
               <p className={cn("text-xl font-mono font-bold tracking-[0.3em]", theme === 'light' ? "text-zinc-950" : "text-white")}>{roomCode}</p>
             </div>
           </div>
@@ -1290,7 +1290,7 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Protocol Handle</label>
+                  <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Assignment Title</label>
                   <Input 
                     placeholder="e.g. Algorithmic Prime Detection"
                     value={title}
@@ -1305,7 +1305,7 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
 
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Priority Tier</label>
+                    <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Assignment Type</label>
                     <select 
                       className={cn(
                         "w-full h-14 rounded-2xl border px-6 text-sm font-bold focus:ring-2 focus:outline-hidden appearance-none cursor-pointer transition-all",
@@ -1315,11 +1315,11 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
                       onChange={(e) => setType(e.target.value as 'exercise' | 'assignment')}
                     >
                       <option value="exercise">Standard Exercise</option>
-                      <option value="assignment">Critical Assignment</option>
+                      <option value="assignment">Assignment</option>
                     </select>
                   </div>
                   <div className="space-y-3">
-                    <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Execution Env</label>
+                    <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Programming Language</label>
                     <select 
                       className={cn(
                         "w-full h-14 rounded-2xl border px-6 text-sm font-bold focus:ring-2 focus:outline-hidden appearance-none cursor-pointer transition-all",
@@ -1413,7 +1413,7 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
 
                 <div className="space-y-3 flex-1 flex flex-col min-h-0">
                   <div className="flex items-center justify-between ml-1">
-                    <label className={cn("text-[10px] font-black uppercase tracking-[0.3em]", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Seed Code Protocol</label>
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.3em]", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>Starter Code</label>
                     <Badge variant="outline" className={cn("text-[8px] font-black tracking-widest", theme === 'light' ? "border-zinc-200 text-zinc-600" : "border-zinc-800 text-zinc-400")}>{lang.toUpperCase()}</Badge>
                   </div>
                   <div className={cn(
@@ -1438,18 +1438,18 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
                       }}
                     />
                   </div>
-                  <p className={cn("text-[9px] font-medium italic leading-relaxed px-1", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>This logic will be broadcasted to all terminal nodes as the mission starting point.</p>
+                  <p className={cn("text-[9px] font-medium italic leading-relaxed px-1", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>This code will be shared with all students as their starting template.</p>
                 </div>
               </div>
 
               <div className="space-y-6 flex flex-col h-full">
-                <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-400")}>Requirement Matrix</label>
+                <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-400")}>Assignment Description</label>
                 <textarea 
                   className={cn(
                     "flex-1 w-full min-h-[250px] p-8 rounded-[2.5rem] border text-base font-medium focus:ring-2 transition-all placeholder:text-zinc-300 resize-none",
                     theme === 'light' ? "bg-zinc-50/50 border-zinc-200 text-zinc-950 focus:bg-white focus:ring-zinc-950" : "bg-zinc-900 border-zinc-800 text-white focus:ring-white/20"
                   )}
-                  placeholder="Draft system requirements, constraints, and objective logic..."
+                  placeholder="Write the instructions, rules, and expectations for this coding assignment..."
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
                   required
@@ -1458,9 +1458,9 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
             </div>
 
             <div className="flex gap-6 shrink-0 pt-2">
-              <Button type="button" variant="ghost" className="h-16 flex-1 rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 hover:text-zinc-950" onClick={onClose}>Abort Protocol</Button>
+              <Button type="button" variant="ghost" className="h-16 flex-1 rounded-3xl text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 hover:text-zinc-950" onClick={onClose}>Cancel</Button>
               <Button type="submit" className="h-16 flex-1 rounded-3xl bg-zinc-950 text-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] text-[10px] font-black uppercase tracking-[0.3em]" isLoading={loading}>
-                {problem ? 'Update Deployment' : 'Deploy To Production'}
+                {problem ? 'Save Changes' : 'Publish Assignment'}
               </Button>
             </div>
           </form>

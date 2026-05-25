@@ -295,24 +295,29 @@ export default function StudentClassroom({
     if (!selectedProblem || !code) return;
     setIsGettingHint(true);
     try {
-      const { GoogleGenAI } = await import('@google/genai');
-      const aiToken = (process.env as unknown as { GEMINI_API_KEY: string }).GEMINI_API_KEY || '';
-      const ai = new GoogleGenAI({ apiKey: aiToken });
-      
-      const prompt = `You are a helpful coding tutor. A student is working on the following problem and is stuck.
-Problem Title: ${selectedProblem.title}
-Problem Description: ${selectedProblem.description}
-Student's Current Code (${selectedProblem.language}):
-${code}
-
-Please provide a helpful, encouraging hint. Do NOT give the full solution. Focus on pointing out logic errors, suggesting a next step, or explaining a concept they might be missing. Keep it concise.`;
-
-      const result = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: [{ parts: [{ text: prompt }] }],
+      const response = await fetch('/api/hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemTitle: selectedProblem.title,
+          problemDescription: selectedProblem.description,
+          code,
+          language: selectedProblem.language
+        })
       });
-      
-      const hint = result.text || "I'm sorry, I couldn't think of a hint right now. Try reviewing the problem requirements!";
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        if (errData.error === 'missing_api_key') {
+          setOutput(prev => `[AI Error] Gemini API Key configuration required. Please ensure GEMINI_API_KEY / VITE_GEMINI_API_KEY is configured in Vercel settings.\n\n${prev}`);
+          setActivePanel('problem');
+          return;
+        }
+        throw new Error(errData.message || 'Hint generation failed');
+      }
+
+      const data = await response.json();
+      const hint = data.text || "I'm sorry, I couldn't think of a hint right now. Try reviewing the problem requirements!";
       
       // Add hint to the console output area
       setOutput(prev => `[AI TUTOR HINT]\n${hint}\n\n${prev}`);
@@ -359,17 +364,18 @@ Please provide a helpful, encouraging hint. Do NOT give the full solution. Focus
 
   const simulateOutput = async (code: string, language: string) => {
     try {
-      const { GoogleGenAI } = await import('@google/genai');
-      const aiToken = (process.env as unknown as { GEMINI_API_KEY: string }).GEMINI_API_KEY || '';
-      const ai = new GoogleGenAI({ apiKey: aiToken });
-      
-      const prompt = `You are a code execution engine. Analyze the following ${language} code and provide the exact output it would produce. If there are syntax errors, provide the error message. Do not include any explanation, just the raw output.\n\nCode:\n${code}`;
-      
-      const result = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
+      const response = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language })
       });
-      return result.text || 'No output produced.';
+
+      if (!response.ok) {
+        throw new Error('Simulation failed');
+      }
+
+      const data = await response.json();
+      return data.text || 'No output produced.';
     } catch (e) {
       console.error('AI Simulation Error:', e);
       return 'Execution Engine Error: Connection failed. Please check your network.';
@@ -866,7 +872,7 @@ Please provide a helpful, encouraging hint. Do NOT give the full solution. Focus
                 >
                   <div>
                     <h2 className={cn("text-2xl font-display font-bold mb-2 tracking-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>Hall of Fame</h2>
-                    <p className="text-xs font-medium text-zinc-500">The top engineers in this mission.</p>
+                    <p className="text-xs font-medium text-zinc-500">The top coding students in this classroom.</p>
                   </div>
 
                   <div className="space-y-3">

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
 import { MessageSquare, Sparkles, Send, Bot, User, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,6 +16,7 @@ import { cn } from '../lib/utils';
 
 export default function AITutor() {
   const { profile } = useAuth();
+
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: 'model', 
@@ -37,29 +37,37 @@ export default function AITutor() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined);
-
-    if (!geminiKey) {
-      setMessages(prev => [...prev, { role: 'model', text: "API Key is missing. Please configure VITE_GEMINI_API_KEY." }]);
-      return;
-    }
-
     const userMsg = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: geminiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: [{ parts: [{ text: userMsg }] }],
-        config: {
-          systemInstruction: "You are a friendly, encouraging coding mentor for LEVELUP students. Some are very new to coding, so explain things simply and clearly without using too much technical jargon. You help with logic, debugging, and general programming questions. Always be supportive and celebrate their learning journey!",
-        }
+      const response = await fetch('/api/tutor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, { role: 'user', text: userMsg }]
+        })
       });
 
-      const aiText = response.text || "I'm sorry, I couldn't generate a response.";
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        if (errData.error === 'missing_api_key') {
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'model',
+              text: "### ⚠️ Google Gemini API Key Required\n\nIt looks like your deployment is missing the **`GEMINI_API_KEY`** or **`VITE_GEMINI_API_KEY`** environment variable!\n\nTo activate your AI Tutor, follow these quick steps:\n\n1. Get a free API key from [Google AI Studio](https://aistudio.google.com).\n2. Navigate to your project on the **Vercel Dashboard**.\n3. Go to **Settings ➔ Environment Variables**.\n4. Add a variable named **`GEMINI_API_KEY`** with your new key.\n5. Click **Redeploy** on your latest deployment on Vercel."
+            }
+          ]);
+          return;
+        }
+        throw new Error(errData.message || 'API failed');
+      }
+
+      const data = await response.json();
+      const aiText = data.text || "I'm sorry, I couldn't generate a response.";
       setMessages(prev => [...prev, { role: 'model', text: aiText }]);
     } catch (error) {
       console.error("AI Error:", error);

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Beautiful Rounded Dark Canvas matching LEVELUP brand theme -->
+  <rect width="512" height="512" rx="140" fill="#09090b" />
+  
+  <!-- Subtle inner gradient border for premium aesthetic depth -->
+  <rect x="12" y="12" width="488" height="488" rx="128" fill="none" stroke="url(#glowing-border)" stroke-width="8" opacity="0.4" />
+
+  <defs>
+    <!-- Modern Electric Blue and Indigo styling gradients -->
+    <linearGradient id="brand-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <linearGradient id="glowing-border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="50%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left Code Bracket in clean clean white -->
+  <path d="M 180,170 L 90,260 L 180,350" 
+        fill="none" 
+        stroke="#ffffff" 
+        stroke-width="48" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Right Code Bracket in clean white -->
+  <path d="M 332,170 L 422,260 L 332,350" 
+        fill="none" 
+        stroke="#ffffff" 
+        stroke-width="48" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" />
+
+  <!-- Dynamic LEVELUP Coding Slash with Electric Blue Tech Ascent -->
+  <path d="M 292,130 L 220,382" 
+        fill="none" 
+        stroke="url(#brand-gradient)" 
+        stroke-width="48" 
+        stroke-linecap="round" />
+</svg>

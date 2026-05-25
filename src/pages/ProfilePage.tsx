@@ -230,36 +230,36 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Navigation Action Area */}
         <div className="flex items-center justify-between">
           <Button 
             variant="ghost" 
             onClick={() => navigate(-1)}
-            className="h-12 px-6 rounded-2xl flex items-center gap-3 text-zinc-500 hover:text-zinc-950 hover:bg-white transition-all group"
+            className="h-10 px-4 rounded-xl flex items-center gap-2.5 text-zinc-500 hover:text-zinc-950 hover:bg-white transition-all group"
           >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> 
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Return to Protocol</span>
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
+            <span className="text-[9px] font-black uppercase tracking-[0.2em]">Go Back</span>
           </Button>
           
           <Link to="/dashboard">
             <Button 
               variant="ghost" 
-              className="h-12 px-6 rounded-2xl flex items-center gap-3 text-zinc-500 hover:text-zinc-950 hover:bg-white transition-all group"
+              className="h-10 px-4 rounded-xl flex items-center gap-2.5 text-zinc-500 hover:text-zinc-950 hover:bg-white transition-all group"
             >
-              <Code2 className="w-5 h-5" /> 
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Command Center</span>
+              <Code2 className="w-4 h-4" /> 
+              <span className="text-[9px] font-black uppercase tracking-[0.2em]">Dashboard</span>
             </Button>
           </Link>
         </div>
 
         {/* Header/Cover Section */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[3rem] shadow-[0_32px_64px_rgba(0,0,0,0.06)] border border-white overflow-hidden"
+          className="bg-white rounded-3xl shadow-[0_4px_30px_rgba(0,0,0,0.02)] border border-white overflow-hidden"
         >
-          <div className="h-48 md:h-64 bg-zinc-950 relative overflow-hidden">
+          <div className="h-32 md:h-44 bg-zinc-950 relative overflow-hidden">
             <div className="absolute inset-0 bg-blue-600/10" />
             <div className="absolute inset-0 overflow-hidden">
                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] opacity-20 blur-[100px] pointer-events-none">
@@ -269,19 +269,19 @@ export default function ProfilePage() {
             </div>
             
             {isOwnProfile && (
-              <div className="absolute top-8 right-8 z-20">
+              <div className="absolute top-4 right-4 z-20">
                 {!editing ? (
                   <Button 
-                    className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-xl border border-white/20 h-14 px-8 rounded-2xl flex items-center gap-3 transition-all font-bold"
+                    className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-xl border border-white/20 h-10 px-5 rounded-xl flex items-center gap-2 transition-all font-bold text-xs"
                     onClick={() => setEditing(true)}
                   >
-                    <Edit3 className="w-5 h-5" /> Edit Profile
+                    <Edit3 className="w-4 h-4" /> Edit Profile
                   </Button>
                 ) : (
-                  <div className="flex gap-3">
+                  <div className="flex gap-2.5">
                     <Button 
                       variant="outline"
-                      className="bg-zinc-950/40 border-white/20 text-white hover:bg-zinc-950/60 h-14 px-8 rounded-2xl font-bold"
+                      className="bg-zinc-950/40 border-white/20 text-white hover:bg-zinc-950/60 h-10 px-5 rounded-xl font-bold text-xs"
                       onClick={() => {
                         setEditing(false);
                         setName(profile.name);
@@ -298,7 +298,7 @@ export default function ProfilePage() {
                       Cancel
                     </Button>
                     <Button 
-                      className="bg-blue-600 hover:bg-blue-700 text-white h-14 px-8 rounded-2xl font-bold shadow-xl shadow-blue-900/20"
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-10 px-5 rounded-xl font-bold text-xs shadow-md shadow-blue-900/20"
                       onClick={handleUpdate}
                       isLoading={updating}
                     >
@@ -310,11 +310,11 @@ export default function ProfilePage() {
             )}
           </div>
           
-          <div className="px-8 md:px-16 pb-16 relative">
-            <div className="flex flex-col md:flex-row gap-8 md:gap-12 -mt-20 md:-mt-24">
+          <div className="px-6 md:px-10 pb-8 relative">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-10 -mt-14 md:-mt-16">
               {/* Profile Photo */}
               <div className="relative group shrink-0">
-                <div className="w-40 h-40 md:w-48 md:h-48 rounded-[3rem] bg-zinc-50 border-8 border-white shadow-2xl overflow-hidden relative">
+                <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl bg-zinc-50 border-8 border-white shadow-2xl overflow-hidden relative">
                   {photoURL ? (
                     <img src={photoURL} alt={profile.name} className="w-full h-full object-cover" />
                   ) : (

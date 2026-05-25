@@ -223,73 +223,77 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12"
+        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 relative"
       >
-        <div>
-          <h1 className="font-display text-3xl font-bold text-black tracking-tighter leading-none">
-            Your <br />
-            <span className="text-blue-600 uppercase">Dashboard.</span>
-          </h1>
-          <p className="text-zinc-600 mt-4 text-base font-medium tracking-tight">
-            Welcome back, <span className="text-black font-bold">{profile?.name || user?.user_metadata?.name || 'Student'}</span>
-          </p>
+        <div className="relative z-10 w-full">
+          <div className="flex flex-col md:flex-row md:items-end justify-between w-full gap-6">
+            <div>
+              <h1 className="font-display text-2xl lg:text-3xl font-black text-zinc-900 tracking-tighter leading-none text-balance">
+                Your <span className="text-blue-600 uppercase">Dashboard.</span>
+              </h1>
+              <p className="text-zinc-500 mt-2 text-sm font-medium tracking-tight">
+                Welcome back, <span className="text-zinc-950 font-bold underline decoration-blue-500 decoration-2 underline-offset-4">{profile?.name || user?.user_metadata?.name || 'Student'}</span>
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              {profile?.role === 'teacher' ? (
+                <Link to="/classroom/create" className="w-full sm:w-auto">
+                  <Button size="md" className="w-full sm:w-auto h-11 px-6 rounded-xl bg-zinc-900 hover:bg-zinc-800 shadow-md transition-all text-xs font-bold text-white group">
+                    <Plus className="w-4 h-4 mr-2.5 group-hover:rotate-90 transition-transform duration-500" /> Create Classroom
+                  </Button>
+                </Link>
+              ) : (
+                <div className="flex gap-2 p-1 glass rounded-2xl border-white group w-full sm:w-auto">
+                  <form onSubmit={handleJoinClass} className="flex gap-2 w-full sm:w-auto">
+                    <Input 
+                      placeholder="ENTER ROOM CODE"
+                      value={roomCode}
+                      onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                      className="w-full sm:w-40 h-10 rounded-xl border-transparent bg-white/50 focus:bg-white font-mono font-black text-center tracking-widest uppercase text-xs transition-all"
+                      error={error}
+                    />
+                    <Button type="submit" className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-md text-[10px] font-black uppercase tracking-wider text-white transition-all active:scale-95" isLoading={joining}>Join</Button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
           
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-6 flex items-center gap-4 group cursor-default"
+            initial={{ opacity: 0, x: -15 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-5 flex items-center gap-4 group cursor-default"
           >
-             <div className="w-1 h-8 bg-blue-600/20 group-hover:bg-blue-600 transition-all duration-700" />
-             <div>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">DAILY MOMENTUM</p>
-                <p className="text-xs font-medium text-zinc-500 italic">"{momentumQuote.text}" — {momentumQuote.author}</p>
+             <div className="w-1 h-6 bg-zinc-900 group-hover:bg-blue-600 transition-all duration-700 rounded-full" />
+             <div className="max-w-xl">
+                <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.3em] mb-0.5">LEARNING INSIGHT</p>
+                <p className="text-xs font-semibold text-zinc-500 italic leading-relaxed text-balance">"{momentumQuote.text}" — <span className="not-italic font-black text-zinc-400 opacity-60 ml-1">{momentumQuote.author}</span></p>
              </div>
           </motion.div>
         </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-          {profile?.role === 'teacher' ? (
-            <Link to="/classroom/create" className="w-full sm:w-auto">
-              <Button size="md" className="w-full sm:w-auto h-12 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all text-sm font-bold text-white">
-                <Plus className="w-4 h-4 mr-2" /> Create Classroom
-              </Button>
-            </Link>
-          ) : (
-            <div className="flex gap-3 p-1.5 bg-white rounded-2xl border border-zinc-100 shadow-xl">
-              <form onSubmit={handleJoinClass} className="flex gap-2">
-                <Input 
-                  placeholder="JOIN CODE"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  className="w-36 h-12 rounded-xl border-zinc-50 bg-zinc-50/50 font-mono font-black text-center tracking-widest uppercase text-sm"
-                  error={error}
-                />
-                <Button type="submit" className="h-12 px-6 rounded-xl bg-blue-600 shadow-lg text-xs font-black uppercase tracking-widest text-white" isLoading={joining}>Join</Button>
-              </form>
-            </div>
-          )}
-        </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 relative z-10">
         <StatCard 
-          icon={<BookOpen className="w-5 h-5" />} 
-          label="Your Classes" 
+          icon={<BookOpen className="w-4 h-4" />} 
+          label="Active Classrooms" 
           value={classes.length < 10 ? `0${classes.length}` : classes.length.toString()} 
           color="blue"
           delay={0.1}
         />
         <StatCard 
-          icon={<Activity className="w-5 h-5" />} 
-          label="Recent Activity" 
+          icon={<Activity className="w-4 h-4" />} 
+          label="Recent Activities" 
           value={activities.length < 10 ? `0${activities.length}` : activities.length.toString()} 
           color="zinc"
           delay={0.2}
         />
         <StatCard 
-          icon={<CheckCircle className="w-5 h-5" />} 
+          icon={<CheckCircle className="w-4 h-4" />} 
           label="Completed Tasks" 
           value={activities.filter(a => a.type === 'submission' && (a.status === 'correct' || a.status === 'completed')).length.toString().padStart(2, '0')} 
           color="green"
@@ -297,185 +301,177 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-10">
-            <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.4em] ml-1">
-               MY_CLASSROOMS
+          <div className="flex items-center justify-between mb-5 pb-2 border-b border-zinc-100">
+            <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] ml-1">
+               MY CLASSROOMS
             </h2>
-            <div className="w-1/3 h-px bg-zinc-100" />
           </div>
 
           {classes.length === 0 ? (
-            <div className="bg-zinc-50/50 rounded-[4rem] border-2 border-dashed border-zinc-100 p-32 text-center">
-              <div className="bg-white w-24 h-24 rounded-[2rem] shadow-xl border border-zinc-50 flex items-center justify-center mx-auto mb-10">
-                <BookOpen className="w-10 h-10 text-zinc-200" />
+            <div className="glass rounded-3xl p-12 text-center border-white/60">
+              <div className="bg-zinc-950 w-16 h-16 rounded-2xl shadow-xl flex items-center justify-center mx-auto mb-6 rotate-3 group hover:rotate-0 transition-transform duration-500">
+                <BookOpen className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-display font-bold text-3xl text-black tracking-tight">No classrooms yet</h3>
-              <p className="text-zinc-600 mt-4 max-w-sm mx-auto font-medium text-lg leading-relaxed">
+              <h3 className="font-display font-black text-xl text-zinc-900 tracking-tight">No Active Classrooms.</h3>
+              <p className="text-zinc-500 mt-2 max-w-xs mx-auto font-medium text-sm leading-relaxed text-balance">
                 {profile?.role === 'teacher' 
-                  ? "Create your first classroom to begin inviting students." 
-                  : "Enter a join code shared by your teacher to connect to a classroom."}
+                  ? "Create your first classroom to start sharing lessons and assignments." 
+                  : "Enter a room code given by your teacher to join your classroom."}
               </p>
             </div>
           ) : (
-            <div className="space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                {classes.slice(0, 4).map((cls, idx) => (
-                  <Link key={cls.id} to={`/classroom/${cls.id}`}>
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.1 * idx, duration: 0.5 }}
-                      className="group bg-white p-6 rounded-2xl border border-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-all duration-300 relative overflow-hidden h-full flex flex-col"
-                    >
-                      {/* Class content same as before ... */}
-                      <div className="flex justify-between items-start mb-6 relative z-10">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-zinc-100 p-2",
-                        )}>
-                          {cls.language ? (
-                            <img 
-                              src={getLanguageIcon(cls.language)} 
-                              alt="" 
-                              className="w-full h-full object-contain"
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <BookOpen className="w-5 h-5 text-zinc-400" />
-                          )}
-                        </div>
-                        <div className="px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                           <span className="text-[9px] font-mono font-black text-zinc-700 uppercase tracking-[0.2em]">
-                             {cls.roomCode}
-                           </span>
-                        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {classes.slice(0, 4).map((cls, idx) => (
+                <Link key={cls.id} to={`/classroom/${cls.id}`}>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 * idx, duration: 0.4 }}
+                    className="group glass p-5 rounded-3xl transition-all duration-500 h-full flex flex-col hover:border-blue-500/50 hover:shadow-advanced hover:-translate-y-1"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 p-2.5">
+                        {cls.language ? (
+                          <img 
+                            src={getLanguageIcon(cls.language)} 
+                            alt="" 
+                            className="w-full h-full object-contain brightness-0 invert"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="bg-blue-500 w-full h-full rounded-lg flex items-center justify-center">
+                            <BookOpen className="w-4 h-4 text-white" />
+                          </div>
+                        )}
                       </div>
-                      
-                      <div className="mt-auto relative z-10">
-                        <h3 className="font-display font-bold text-xl text-black tracking-tighter mb-3 leading-none">
-                          {cls.className}
-                        </h3>
-                        <div className="flex items-center gap-4 text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                          <span>ACTIVE // JOINED {new Date(cls.createdAt).toLocaleDateString()}</span>
-                        </div>
+                      <div className="px-3 py-1 bg-zinc-900 rounded-xl shadow-md">
+                         <span className="text-[9px] font-mono font-black text-white uppercase tracking-[0.15em]">
+                           {cls.roomCode}
+                         </span>
                       </div>
+                    </div>
+                    
+                    <div className="mt-auto">
+                      <h3 className="font-display font-black text-lg text-zinc-900 tracking-tight mb-2 leading-tight group-hover:text-blue-600 transition-colors">
+                        {cls.className}
+                      </h3>
+                      <div className="flex items-center gap-2 text-zinc-400 text-[9px] font-black uppercase tracking-[0.15em]">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                        <span>LIVE // JOINED {new Date(cls.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
 
-                       <div className="mt-8 pt-6 border-t border-zinc-50 flex items-center justify-between relative z-10">
-                         <span className="text-black font-bold text-sm">Open Classroom</span>
-                         <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center shadow-sm text-zinc-400">
-                           <ArrowRight className="w-4 h-4" />
-                         </div>
-                      </div>
-                    </motion.div>
-                  </Link>
-                ))}
-              </div>
+                     <div className="mt-6 pt-4 border-t border-zinc-100 flex items-center justify-between">
+                       <span className="text-zinc-400 font-black text-[9px] uppercase tracking-wider group-hover:text-zinc-900 transition-colors">Open Classroom</span>
+                       <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md border border-zinc-50 text-zinc-400 group-hover:text-blue-600 group-hover:border-blue-100 transition-all">
+                         <ArrowRight className="w-3.5 h-3.5" />
+                       </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))}
               
               {classes.length > 4 && (
-                <div className="flex justify-center">
-                  <Link to="/classrooms">
-                    <Button variant="outline" className="h-14 px-10 rounded-2xl border-zinc-200 text-black font-bold text-sm shadow-sm hover:bg-zinc-50 transition-all">
-                      View All Classrooms <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
+                <Link to="/classrooms" className="col-span-full">
+                  <motion.div 
+                    whileHover={{ scale: 1.01 }}
+                    className="glass rounded-2xl p-4 text-center border-dashed border-2 border-zinc-200 hover:border-blue-500 transition-all flex items-center justify-center gap-3 group"
+                  >
+                     <span className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400 group-hover:text-blue-600 transition-colors">Load More Classrooms</span>
+                     <ArrowRight className="w-3.5 h-3.5 text-zinc-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                  </motion.div>
+                </Link>
               )}
             </div>
           )}
         </div>
 
-        <div className="space-y-12">
-          <div>
-            <h2 className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-10 ml-1">
-               RECENT_UPDATES
-            </h2>
-            
-            <div className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.04)] relative">
-              <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 z-10" />
-              
-              {activities.length === 0 ? (
-                <div className="p-16 text-center">
-                  <div className="bg-zinc-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Activity className="w-8 h-8 text-zinc-100" />
-                  </div>
-                  <p className="text-zinc-300 text-[10px] font-black uppercase tracking-[0.3em]">No updates yet</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-zinc-50">
-                  {activities.map((act, idx) => (
-                    <motion.div
-                      key={act.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 * idx + 0.5 }}
+        <div>
+          <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em] mb-5 pb-2 border-b border-zinc-100 ml-1">
+             CLASSWORK UPDATES
+          </h2>
+          
+          <div className="glass rounded-3xl border-white overflow-hidden relative shadow-advanced">
+            {activities.length === 0 ? (
+              <div className="p-10 text-center">
+                <Activity className="w-8 h-8 text-zinc-100 mx-auto mb-4" />
+                <p className="text-zinc-300 text-[9px] font-black uppercase tracking-[0.3em]">No activity yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-100/50">
+                {activities.map((act, idx) => (
+                  <motion.div
+                    key={act.id}
+                    initial={{ opacity: 0, x: 15 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 * idx + 0.3 }}
+                  >
+                    <Link 
+                      to={`/classroom/${act.classId}`}
+                      className="block p-4 hover:bg-white transition-all duration-500 group"
                     >
-                      <Link 
-                        to={`/classroom/${act.classId}`}
-                        className="block p-6 hover:bg-blue-50/10 transition-all duration-500 group"
-                      >
-                        <div className="flex gap-4">
-                          <div className={cn(
-                            "w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shrink-0 relative shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:-rotate-3 p-3",
-                          )}>
-                            {act.type === 'problem' && (
-                              <>
-                                {act.language ? (
-                                  <img 
-                                    src={getLanguageIcon(act.language)} 
-                                    alt="" 
-                                    className="w-full h-full object-contain"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                ) : (
-                                  <Code className="w-7 h-7 text-zinc-400" />
-                                )}
-                              </>
-                            )}
-                            {act.type === 'submission' && <CheckCircle className="w-7 h-7 text-blue-600" />}
-                            {act.type === 'resource' && <FileText className="w-7 h-7 text-emerald-500" />}
-                          </div>
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <div className="flex items-center justify-between mb-1.5">
-                               <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest truncate max-w-[120px]">{act.className}</p>
-                               <span className="text-[9px] font-black text-zinc-300 uppercase tracking-widest">
-                                 {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                               </span>
-                            </div>
-                            <h4 className="text-base font-bold text-black truncate tracking-tight group-hover:text-blue-600 transition-colors">
-                              {act.title}
-                            </h4>
-                            <div className="flex items-center gap-3 mt-3">
-                              {act.type === 'submission' && (
-                                <span className={cn(
-                                  "text-[8px] uppercase font-black tracking-[0.2em] px-3 py-1 rounded-full border shadow-xs",
-                                  act.status === 'pending' ? "bg-zinc-50 text-zinc-500 border-zinc-100" :
-                                  act.status === 'correct' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                                  "bg-red-50 text-red-600 border-red-100"
-                                )}>
-                                  {act.status}
-                                </span>
+                      <div className="flex gap-4">
+                        <div className={cn(
+                          "w-9 h-9 rounded-xl glass border-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500 p-2.5",
+                        )}>
+                          {act.type === 'problem' && (
+                            <>
+                              {act.language ? (
+                                <img 
+                                  src={getLanguageIcon(act.language)} 
+                                  alt="" 
+                                  className="w-full h-full object-contain"
+                                  referrerPolicy="no-referrer"
+                               />
+                              ) : (
+                                <Code className="w-4 h-4 text-zinc-900" />
                               )}
-                            </div>
-                          </div>
+                            </>
+                          )}
+                          {act.type === 'submission' && <CheckCircle className="w-4 h-4 text-blue-600" />}
+                          {act.type === 'resource' && <FileText className="w-4 h-4 text-emerald-500" />}
                         </div>
-                      </Link>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div className="mt-8 p-8 bg-blue-600 rounded-[2rem] shadow-2xl relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-1000" />
-               <h4 className="text-[10px] font-black text-white/60 uppercase tracking-[0.4em] mb-3">WELCOME TO LEVELUP</h4>
-               <p className="text-white text-xs font-medium leading-relaxed">We're glad to have you here! Use your dashboard to stay updated on your classes and new programming projects.</p>
-               <div className="mt-6 flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Everything is running smoothly</span>
-               </div>
-            </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                             <p className="text-[8px] font-black text-blue-600 uppercase tracking-widest truncate max-w-[100px]">{act.className}</p>
+                             <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest">
+                               {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                             </span>
+                          </div>
+                          <h4 className="text-xs font-black text-zinc-900 truncate tracking-tight uppercase group-hover:text-blue-600 transition-colors leading-tight text-balance">
+                            {act.title}
+                          </h4>
+                          {act.type === 'submission' && (
+                            <div className="mt-1.5">
+                              <span className={cn(
+                                "text-[7px] uppercase font-black tracking-[0.15em] px-2 py-0.5 rounded-full border shadow-xs",
+                                act.status === 'pending' ? "bg-white text-zinc-400 border-zinc-100" :
+                                act.status === 'correct' ? "bg-emerald-500 text-white border-transparent" :
+                                "bg-red-500 text-white border-transparent"
+                              )}>
+                                {act.status}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-4 p-5 glass-dark rounded-3xl relative overflow-hidden group">
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-600/20 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+             <h4 className="text-[9px] font-black text-blue-400 uppercase tracking-[0.3em] mb-2">SECURE LEARNING</h4>
+             <p className="text-zinc-400 text-[11px] font-medium leading-relaxed tracking-tight">LEVELUP provides a safe, real-time workspace for school students to learn, share code, and receive direct feedback.</p>
+             <div className="mt-4 flex items-center gap-2">
+                <div className="w-1 h-1 bg-blue-500 animate-pulse rounded-full" />
+                <span className="text-[8px] font-black text-white uppercase tracking-widest">Connection Stable</span>
+             </div>
           </div>
         </div>
       </div>
@@ -493,17 +489,17 @@ function StatCard({ icon, label, value, color, delay = 0 }: { icon: React.ReactN
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-white p-4 md:p-5 rounded-2xl border border-zinc-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-4 group hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] transition-all duration-500"
+      className="glass p-4 rounded-2xl border-white shadow-advanced flex items-center gap-4 group hover:-translate-y-1 transition-all duration-500"
     >
-      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3", colorClasses)}>
+      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md transition-all duration-500 group-hover:scale-110 group-hover:rotate-3", colorClasses)}>
         {icon}
       </div>
       <div>
-        <p className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em]">{label}</p>
-        <p className="text-lg font-display font-bold text-black mt-0.5 tracking-tight">{value}</p>
+        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.25em] mb-0.5">{label}</p>
+        <p className="text-xl font-display font-black text-zinc-900 tracking-tight leading-none">{value}</p>
       </div>
     </motion.div>
   );

@@ -361,44 +361,44 @@ export default function PeerHub() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto py-6 px-4 md:px-0">
+      <div className="max-w-3xl mx-auto py-3 px-4 md:px-0">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
+          className="space-y-6"
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="font-display text-3xl font-bold text-black tracking-tighter leading-none mb-3 uppercase">
+              <h1 className="font-display text-2xl font-bold text-black tracking-tighter leading-none mb-1.5 uppercase">
                 Peer <span className="text-blue-600">Hub.</span>
               </h1>
-              <p className="text-zinc-600 text-base font-medium tracking-tight">
+              <p className="text-zinc-600 text-sm font-medium tracking-tight">
                 {activeTab === 'feed' 
                   ? "Discuss, share breakthroughs, and learn together with fellow students."
                   : "Find and connect with fellow learners across the globe."}
               </p>
             </div>
-            <div className="flex items-center gap-3 self-start">
+            <div className="flex items-center gap-2 self-start">
               <button 
                 onClick={() => setActiveTab(activeTab === 'feed' ? 'discover' : 'feed')}
                 className={cn(
-                  "p-4 rounded-[2rem] border flex items-center gap-3 transition-all",
+                  "p-3 rounded-xl border flex items-center gap-2.5 transition-all",
                   activeTab === 'discover' 
-                    ? "bg-zinc-950 text-white border-zinc-900 shadow-xl" 
+                    ? "bg-zinc-950 text-white border-zinc-900 shadow-md" 
                     : "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100"
                 )}
               >
                 {activeTab === 'feed' ? (
                   <>
-                    <UserPlus className="w-6 h-6" />
-                    <div className="text-[10px] font-black uppercase tracking-widest text-left">
+                    <UserPlus className="w-5 h-5" />
+                    <div className="text-[9px] font-black uppercase tracking-wider text-left">
                       Connect Peers
                     </div>
                   </>
                 ) : (
                   <>
-                    <ArrowLeft className="w-5 h-5" />
-                    <div className="text-[10px] font-black uppercase tracking-widest">
+                    <ArrowLeft className="w-4 h-4" />
+                    <div className="text-[9px] font-black uppercase tracking-wider">
                       Back To Feed
                     </div>
                   </>
@@ -411,40 +411,40 @@ export default function PeerHub() {
             {activeTab === 'feed' ? (
               <motion.div
                 key="feed"
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -15 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-12"
+                exit={{ opacity: 0, x: 15 }}
+                className="space-y-6"
               >
                 {/* Create Post */}
-                <div className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-[0_30px_100px_rgba(0,0,0,0.04)] relative overflow-hidden group">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 group-focus-within:h-2 transition-all" />
+                <div className="bg-white p-4.5 rounded-2xl border border-zinc-100 shadow-[0_4px_30px_rgba(0,0,0,0.02)] relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 group-focus-within:h-1.5 transition-all" />
                   <textarea 
                     value={newPost}
                     onChange={(e) => setNewPost(e.target.value)}
                     placeholder="Ask a question or share a breakthrough..."
-                    className="w-full bg-transparent border-none focus:ring-0 text-base placeholder:text-zinc-400 resize-none min-h-[100px] font-medium"
+                    className="w-full bg-transparent border-none focus:ring-0 text-sm placeholder:text-zinc-400 resize-none min-h-[75px] font-medium"
                   />
                   
                   {previewUrl && (
-                    <div className="relative mt-3 mb-4 group/preview">
-                      <div className="aspect-video rounded-2xl overflow-hidden border border-zinc-100 shadow-lg">
+                    <div className="relative mt-2 mb-3 group/preview">
+                      <div className="aspect-video rounded-xl overflow-hidden border border-zinc-100 shadow-md">
                         <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                       </div>
                       <button 
                         onClick={removeImage}
-                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md shadow-xl flex items-center justify-center text-red-500 hover:scale-110 transition-all opacity-0 group-hover/preview:opacity-100"
+                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-md flex items-center justify-center text-red-500 hover:scale-110 transition-all opacity-0 group-hover/preview:opacity-100"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-zinc-50">
-                    <div className="flex gap-4">
-                       <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-zinc-500 hover:bg-zinc-50 hover:text-black transition-all cursor-pointer">
-                         <ImageIcon className="w-4 h-4" />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Share Photo</span>
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-zinc-50">
+                    <div className="flex gap-3">
+                       <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-zinc-500 hover:bg-zinc-50 hover:text-black transition-all cursor-pointer">
+                         <ImageIcon className="w-3.5 h-3.5" />
+                         <span className="text-[9px] font-black uppercase tracking-wider">Share Photo</span>
                          <input 
                            type="file" 
                            className="hidden" 
@@ -458,13 +458,13 @@ export default function PeerHub() {
                       onClick={handlePost}
                       disabled={(!newPost.trim() && !imageFile) || !user || uploading}
                       className={cn(
-                        "rounded-xl h-10 px-6 text-[11px] font-black uppercase tracking-widest transition-all",
+                        "rounded-lg h-9 px-4 text-[10px] font-black uppercase tracking-wider transition-all",
                         (!newPost.trim() && !imageFile) || !user || uploading
                           ? "bg-zinc-950 text-zinc-500 cursor-not-allowed shadow-none opacity-80"
-                          : "bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100 text-white"
+                          : "bg-blue-600 hover:bg-blue-700 shadow-md text-white"
                       )}
                     >
-                      {uploading ? 'Sharing...' : 'Share Momentum'} <Send className="w-3.5 h-3.5 ml-2.5" />
+                      {uploading ? 'Sharing...' : 'Share'} <Send className="w-3 h-3 ml-2" />
                     </Button>
                   </div>
                 </div>

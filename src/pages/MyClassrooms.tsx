@@ -99,53 +99,52 @@ export default function MyClassrooms() {
   return (
     <DashboardLayout>
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12"
+        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8"
       >
         <div>
-          <h1 className="font-display text-4xl font-bold text-black tracking-tighter leading-none">
-            My <br />
-            <span className="text-blue-600 uppercase">Classrooms.</span>
+          <h1 className="font-display text-2xl lg:text-3xl font-bold text-black tracking-tighter leading-none">
+            My <span className="text-blue-600 uppercase">Classrooms.</span>
           </h1>
-          <p className="text-zinc-600 mt-4 text-base font-medium tracking-tight">
+          <p className="text-zinc-600 mt-2 text-sm font-medium tracking-tight">
             Manage and access all your learning spaces in one place.
           </p>
         </div>
 
-        <div className="w-full md:w-80">
+        <div className="w-full md:w-72">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-blue-500 transition-colors" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 group-focus-within:text-blue-500 transition-colors" />
             <Input 
-              placeholder="Search by name or code..."
+              placeholder="Search rooms..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-11 h-12 bg-white rounded-2xl border-zinc-100 shadow-xl focus:ring-blue-500"
+              className="pl-10 h-10 text-xs bg-white rounded-xl border-zinc-100 shadow-md focus:ring-blue-500"
             />
           </div>
         </div>
       </motion.div>
 
       {filteredClasses.length === 0 ? (
-        <div className="bg-zinc-50/50 rounded-[4rem] border-2 border-dashed border-zinc-100 p-24 text-center">
-          <div className="bg-white w-20 h-20 rounded-[1.5rem] shadow-xl border border-zinc-50 flex items-center justify-center mx-auto mb-8">
-            <BookOpen className="w-8 h-8 text-zinc-200" />
+        <div className="bg-zinc-50/50 rounded-3xl border-2 border-dashed border-zinc-100 p-12 text-center">
+          <div className="bg-white w-14 h-14 rounded-2xl shadow-md border border-zinc-50 flex items-center justify-center mx-auto mb-6">
+            <BookOpen className="w-6 h-6 text-zinc-200" />
           </div>
-          <h3 className="font-display font-bold text-2xl text-black tracking-tight">No classrooms found</h3>
-          <p className="text-zinc-600 mt-2 font-medium">Try adjusting your search criteria.</p>
+          <h3 className="font-display font-bold text-lg text-black tracking-tight font-black">No classrooms found</h3>
+          <p className="text-zinc-600 mt-1.5 text-xs font-semibold">Try adjusting your search criteria.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredClasses.map((cls, idx) => (
             <Link key={cls.id} to={`/classroom/${cls.id}`}>
               <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.05 * idx, duration: 0.4 }}
-                className="group bg-white p-6 rounded-3xl border border-zinc-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(59,130,246,0.05)] hover:border-blue-100 transition-all duration-300 relative h-full flex flex-col"
+                className="group bg-white p-4.5 rounded-2xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_40px_rgba(59,130,246,0.04)] hover:border-blue-100 transition-all duration-300 relative h-full flex flex-col"
               >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center border border-zinc-50 p-2 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-9 h-9 rounded-xl bg-zinc-50 flex items-center justify-center border border-zinc-50 p-2 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
                     {cls.language ? (
                       <img 
                         src={getLanguageIcon(cls.language)} 
@@ -158,22 +157,22 @@ export default function MyClassrooms() {
                     )}
                   </div>
                   <div className="px-2.5 py-1 bg-zinc-50 rounded-lg border border-zinc-100 group-hover:bg-blue-50 group-hover:border-blue-100 group-hover:text-blue-600 transition-all">
-                     <span className="text-[10px] font-mono font-black text-zinc-700 uppercase tracking-widest group-hover:text-blue-600">
+                     <span className="text-[9px] font-mono font-black text-zinc-700 uppercase tracking-widest group-hover:text-blue-600">
                        {cls.roomCode}
                      </span>
                   </div>
                 </div>
                 
-                <h3 className="font-display font-bold text-xl text-black tracking-tight mb-2 group-hover:text-blue-600 transition-colors">
+                <h3 className="font-display font-black text-base text-black tracking-tight mb-1 group-hover:text-blue-600 transition-colors leading-tight">
                   {cls.className}
                 </h3>
-                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-6">
+                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-4">
                   {profile?.role === 'teacher' ? 'TEACHER' : 'ENROLLED STUDENT'}
                 </p>
 
-                <div className="mt-auto pt-4 border-t border-zinc-50 flex items-center justify-between">
-                   <span className="text-zinc-400 font-bold text-[10px] uppercase tracking-widest group-hover:text-zinc-600">Enter Class</span>
-                   <div className="w-8 h-8 rounded-lg bg-zinc-50 flex items-center justify-center shadow-sm text-zinc-300 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <div className="mt-auto pt-3 border-t border-zinc-50 flex items-center justify-between">
+                   <span className="text-zinc-400 font-bold text-[9px] uppercase tracking-widest group-hover:text-zinc-600">Enter Class</span>
+                   <div className="w-7 h-7 rounded-md bg-zinc-50 flex items-center justify-center shadow-xs text-zinc-300 group-hover:bg-blue-600 group-hover:text-white transition-all">
                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                    </div>
                 </div>
