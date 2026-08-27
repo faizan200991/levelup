@@ -52,8 +52,8 @@ export default function DashboardLayout({ children, theme = 'light' }: LayoutPro
         "flex-1 transition-all duration-300 relative",
         isCollapsed ? "lg:ml-20" : "lg:ml-64"
       )}>
-        {/* Desktop Top Actions */}
-        <div className="hidden lg:flex absolute top-6 right-8 z-20">
+        {/* Desktop Top Bar — reserves its own space so it never overlaps page content */}
+        <div className="hidden lg:flex items-center justify-end h-14 px-8 border-b border-zinc-100">
           <NotificationPopover />
         </div>
 
