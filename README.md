@@ -4,6 +4,41 @@
 
 ---
 
+## 🚀 Getting Started
+
+### Prerequisites
+*   Node.js 18 or later
+*   A free [Supabase](https://supabase.com) account and project
+*   A [Google Gemini API key](https://ai.google.dev/)
+
+### Installation
+```bash
+git clone <this-repository-url>
+cd levelup
+npm install
+```
+
+### Configuration
+1. Copy the example environment file: `cp .env.example .env`
+2. In your Supabase project dashboard, go to **Settings → API** and copy your Project URL and anon/public key into `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+3. Add your Gemini API key to `GEMINI_API_KEY` and `VITE_GEMINI_API_KEY`.
+4. In the Supabase SQL Editor, run the full contents of `supabase_schema.sql` to create all tables, RLS policies, and triggers.
+
+### Running Locally
+```bash
+npm run dev
+```
+The app will be available at `http://localhost:5173`.
+
+### Building for Production
+```bash
+npm run build
+npm run start
+```
+
+### Keeping the Database Alive
+See [Keeping the Database Alive](#-keeping-the-database-alive-supabase-free-tier) below to enable the included keep-alive GitHub Action.
+
 ## 🔴 The Problem: Fragmented Learning
 Traditional coding education suffers from **Cognitive Load Overload**. Students typically juggle:
 1.  **Teacher's Screen Share:** (Zoom/Meet, often laggy or low res)
@@ -94,6 +129,21 @@ const channel = supabase
 We moved away from the "standard" 16px font-size defaults. By utilizing a **12px-14px primary scale** with tight letter spacing and zinc-based neutrals, we've created a UI that feels like a professional IDE. This maximizes the screen real estate available for code and documentation.
 
 ---
+
+## 🔒 Security Model
+
+All tables use Postgres Row Level Security (RLS). Notably:
+
+*   **No open write policies.** Actions with side effects on other users' data (liking a post, notifying a user) go through `SECURITY DEFINER` RPC functions or database triggers (`increment_post_likes`, `notify_on_post_like`, `notify_on_comment`, `notify_on_follow`) rather than permissive `USING (true)` policies, so a client can only ever mutate exactly what the function allows — not arbitrary columns or rows.
+*   **Live session isolation.** `live_sessions` (a student's real-time code buffer) is only readable by the student who owns it or the teacher of that specific classroom — not by any other authenticated user.
+*   **Scoped notifications.** Notifications can only be inserted by a party with a real teacher↔student relationship in a shared classroom (or automatically via trigger for social actions), preventing notification spoofing/spam.
+
+## ⏱ Keeping the Database Alive (Supabase Free Tier)
+
+Supabase's free tier pauses a project after 7 days with no database activity. This repo includes `.github/workflows/keep-alive.yml`, a scheduled GitHub Action that pings the Supabase REST API twice a week to reset the inactivity timer — no paid plan required. To enable it, add these two repository secrets under **Settings → Secrets and variables → Actions**:
+
+*   `SUPABASE_URL`
+*   `SUPABASE_ANON_KEY`
 
 ## 🎓 Technical Interview Prep (Q&A)
 

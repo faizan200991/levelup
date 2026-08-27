@@ -78,19 +78,6 @@ export default function NotificationPopover() {
     };
   }, [user]);
 
-  const createTestNotification = async () => {
-    if (!user) return;
-    const { error } = await supabase.from('notifications').insert({
-      user_id: user.id,
-      actor_id: user.id,
-      actor_name: "System Tester",
-      actor_avatar: "tester",
-      type: 'follow',
-      content: "This is a test notification to verify the system is active!"
-    });
-    if (error) console.error("Test failed:", error);
-  };
-
   const markAsRead = async (id: string) => {
     const { error } = await supabase
       .from('notifications')
@@ -199,13 +186,7 @@ export default function NotificationPopover() {
                 {notifications.length === 0 ? (
                   <div className="p-10 text-center">
                     <Bell className="w-8 h-8 text-zinc-100 mx-auto mb-3" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300 mb-6">Zero alerts found</p>
-                    <button 
-                      onClick={createTestNotification}
-                      className="px-6 py-2.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
-                    >
-                      Send Test Alert
-                    </button>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300">No alerts yet</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-zinc-50">

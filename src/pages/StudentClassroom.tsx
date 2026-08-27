@@ -405,7 +405,7 @@ export default function StudentClassroom({
         actor_id: user.id,
         actor_name: profile?.name || user.email?.split('@')[0] || 'Anonymous',
         actor_avatar: profile?.photo_url || user.id,
-        type: 'comment', // Reusing 'comment' icon for submission for now, or I could add 'submission' type
+        type: 'submission',
         content: `submitted ${selectedProblem.title} in ${classroom.className}`,
         resource_id: classroom.id
       });

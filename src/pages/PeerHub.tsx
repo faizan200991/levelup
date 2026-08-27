@@ -166,16 +166,8 @@ export default function PeerHub() {
       } else {
         await supabase.from('follows').insert({ follower_id: user.id, following_id: targetId });
         followingIds.add(targetId);
-        
-        // Notification for follow
-        const { data: profile } = await supabase.from('profiles').select('name, photo_url').eq('id', user.id).single();
-        await supabase.from('notifications').insert({
-          user_id: targetId,
-          actor_id: user.id,
-          actor_name: profile?.name || user.email?.split('@')[0] || 'Anonymous',
-          actor_avatar: profile?.photo_url || user.id,
-          type: 'follow'
-        });
+        // Notification for the followed user is created automatically by
+        // the trg_notify_on_follow DB trigger — no client insert needed.
       }
       setFollowingIds(new Set(followingIds));
       setUsers(users.map(u => u.id === targetId ? { ...u, is_following: !isFollowing } : u));
@@ -271,26 +263,14 @@ export default function PeerHub() {
     try {
       if (isLiked) {
         await supabase.from('post_likes').delete().match({ post_id: postId, user_id: user.id });
-        await supabase.from('posts').update({ likes_count: Math.max(0, currentLikes - 1) }).eq('id', postId);
+        await supabase.rpc('decrement_post_likes', { p_post_id: postId });
         userLikes.delete(postId);
       } else {
         await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
-        await supabase.from('posts').update({ likes_count: currentLikes + 1 }).eq('id', postId);
+        await supabase.rpc('increment_post_likes', { p_post_id: postId });
         userLikes.add(postId);
-
-        // Notification for like
-        const post = posts.find(p => p.id === postId);
-        if (post && post.author_id !== user.id) {
-          const { data: profile } = await supabase.from('profiles').select('name, photo_url').eq('id', user.id).single();
-          await supabase.from('notifications').insert({
-            user_id: post.author_id,
-            actor_id: user.id,
-            actor_name: profile?.name || user.email?.split('@')[0] || 'Anonymous',
-            actor_avatar: profile?.photo_url || user.id,
-            type: 'like',
-            resource_id: postId
-          });
-        }
+        // Notification for the post author is created automatically by the
+        // trg_notify_on_post_like DB trigger — no client insert needed.
       }
       setUserLikes(new Set(userLikes));
       setPosts(posts.map(p => p.id === postId ? { ...p, likes_count: isLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1 } : p));
@@ -325,19 +305,8 @@ export default function PeerHub() {
 
       if (error) throw error;
 
-      // Notification for comment
-      const post = posts.find(p => p.id === postId);
-      if (post && post.author_id !== user.id) {
-        await supabase.from('notifications').insert({
-          user_id: post.author_id,
-          actor_id: user.id,
-          actor_name: profile?.name || user.email?.split('@')[0] || 'Anonymous',
-          actor_avatar: user.id, 
-          type: 'comment',
-          content: content.length > 30 ? content.substring(0, 27) + '...' : content,
-          resource_id: postId
-        });
-      }
+      // Notification for the post author is created automatically by the
+      // trg_notify_on_comment DB trigger — no client insert needed.
 
       setComments(prev => ({
         ...prev,

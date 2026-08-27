@@ -139,7 +139,12 @@ CREATE POLICY "Teachers can update submissions (feedback)." ON submissions FOR U
 );
 
 -- Live Sessions Policies
-CREATE POLICY "Users can view relevant live sessions." ON live_sessions FOR SELECT USING (true);
+CREATE POLICY "Users can view own or their classroom's live sessions." ON live_sessions FOR SELECT USING (
+  student_id = auth.uid()
+  OR classroom_id IN (
+    SELECT id FROM classrooms WHERE teacher_id = auth.uid()
+  )
+);
 CREATE POLICY "Students can update own live session." ON live_sessions FOR ALL USING (student_id = auth.uid());
 
 -- Resources Policies
@@ -217,10 +222,42 @@ ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE follows ENABLE ROW LEVEL SECURITY;
 
+-- Safe like-count mutation: runs as the function owner (SECURITY DEFINER)
+-- so it can update the likes_count column without granting a general
+-- UPDATE policy on posts. Only touches likes_count, nothing else.
+CREATE OR REPLACE FUNCTION increment_post_likes(p_post_id UUID)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE posts SET likes_count = likes_count + 1 WHERE id = p_post_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION decrement_post_likes(p_post_id UUID)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE posts SET likes_count = GREATEST(0, likes_count - 1) WHERE id = p_post_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION increment_post_likes(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION decrement_post_likes(UUID) TO authenticated;
+
 CREATE POLICY "Posts are viewable by everyone." ON posts FOR SELECT USING (true);
 CREATE POLICY "Users can create posts." ON posts FOR INSERT WITH CHECK (auth.uid() = author_id);
 CREATE POLICY "Users can update/delete own posts." ON posts FOR ALL USING (auth.uid() = author_id);
-CREATE POLICY "Users can also update like counts on any post." ON posts FOR UPDATE USING (true);
+
+-- Likes are handled via the increment_post_likes()/decrement_post_likes() RPC
+-- functions below (SECURITY DEFINER), NOT via a direct UPDATE policy — an
+-- open "USING (true)" UPDATE policy would let any user rewrite any column
+-- on any other user's post, not just the like count.
 
 CREATE POLICY "Comments are viewable by everyone." ON comments FOR SELECT USING (true);
 CREATE POLICY "Users can create comments." ON comments FOR INSERT WITH CHECK (auth.uid() = author_id);
@@ -255,9 +292,100 @@ CREATE TABLE notifications (
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own notifications." ON notifications FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create notifications for others." ON notifications FOR INSERT WITH CHECK (true);
+
+-- Like/comment/follow notifications are created by the triggers below
+-- (SECURITY DEFINER), not by the client, so a user can no longer insert a
+-- notification claiming to be for someone else. Classroom notifications
+-- (submission graded, feedback) still come from the classroom owner, so
+-- INSERT is scoped to actual teacher<->student relationships instead of
+-- being wide open.
+CREATE POLICY "Teachers/students can notify within their own classroom." ON notifications FOR INSERT WITH CHECK (
+  auth.uid() = actor_id
+  AND (
+    -- actor is the teacher of a classroom the recipient is enrolled in
+    EXISTS (
+      SELECT 1 FROM classrooms c
+      JOIN enrollments e ON e.classroom_id = c.id
+      WHERE c.teacher_id = auth.uid() AND e.student_id = user_id
+    )
+    -- or actor is a student enrolled in a classroom the recipient teaches
+    OR EXISTS (
+      SELECT 1 FROM enrollments e
+      JOIN classrooms c ON c.id = e.classroom_id
+      WHERE e.student_id = auth.uid() AND c.teacher_id = user_id
+    )
+  )
+);
+
 CREATE POLICY "Users can update own notifications." ON notifications FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own notifications." ON notifications FOR DELETE USING (auth.uid() = user_id);
+
+-- Auto-create notifications for social actions server-side (SECURITY DEFINER
+-- triggers), so the client never inserts a notification directly for likes,
+-- comments, or follows — closing the forgery gap entirely for these events.
+CREATE OR REPLACE FUNCTION notify_on_post_like()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_author_id UUID;
+  v_actor_name TEXT;
+  v_actor_avatar TEXT;
+BEGIN
+  SELECT author_id INTO v_author_id FROM posts WHERE id = NEW.post_id;
+  IF v_author_id IS NULL OR v_author_id = NEW.user_id THEN
+    RETURN NEW;
+  END IF;
+  SELECT name, photo_url INTO v_actor_name, v_actor_avatar FROM profiles WHERE id = NEW.user_id;
+  INSERT INTO notifications (user_id, actor_id, actor_name, actor_avatar, type, resource_id)
+  VALUES (v_author_id, NEW.user_id, COALESCE(v_actor_name, 'Anonymous'), v_actor_avatar, 'like', NEW.post_id);
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_notify_on_post_like
+AFTER INSERT ON post_likes
+FOR EACH ROW EXECUTE FUNCTION notify_on_post_like();
+
+CREATE OR REPLACE FUNCTION notify_on_comment()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_author_id UUID;
+  v_actor_avatar TEXT;
+BEGIN
+  SELECT author_id INTO v_author_id FROM posts WHERE id = NEW.post_id;
+  IF v_author_id IS NULL OR v_author_id = NEW.author_id THEN
+    RETURN NEW;
+  END IF;
+  SELECT photo_url INTO v_actor_avatar FROM profiles WHERE id = NEW.author_id;
+  INSERT INTO notifications (user_id, actor_id, actor_name, actor_avatar, type, content, resource_id)
+  VALUES (
+    v_author_id, NEW.author_id, NEW.author_name, v_actor_avatar, 'comment',
+    CASE WHEN length(NEW.content) > 30 THEN substring(NEW.content from 1 for 27) || '...' ELSE NEW.content END,
+    NEW.post_id
+  );
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_notify_on_comment
+AFTER INSERT ON comments
+FOR EACH ROW EXECUTE FUNCTION notify_on_comment();
+
+CREATE OR REPLACE FUNCTION notify_on_follow()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_actor_name TEXT;
+  v_actor_avatar TEXT;
+BEGIN
+  SELECT name, photo_url INTO v_actor_name, v_actor_avatar FROM profiles WHERE id = NEW.follower_id;
+  INSERT INTO notifications (user_id, actor_id, actor_name, actor_avatar, type)
+  VALUES (NEW.following_id, NEW.follower_id, COALESCE(v_actor_name, 'Anonymous'), v_actor_avatar, 'follow');
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_notify_on_follow
+AFTER INSERT ON follows
+FOR EACH ROW EXECUTE FUNCTION notify_on_follow();
 
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 -- ==========================================

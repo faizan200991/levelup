@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Heart, MessageSquare, UserPlus, Check, Trash2, Calendar } from 'lucide-react';
+import { Bell, Heart, MessageSquare, UserPlus, Check, Trash2, Calendar, FileCode, ClipboardCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -89,6 +89,8 @@ export default function NotificationsPage() {
       case 'like': return <Heart className="w-4 h-4 text-red-500 fill-red-500" />;
       case 'comment': return <MessageSquare className="w-4 h-4 text-blue-500 fill-blue-500" />;
       case 'follow': return <UserPlus className="w-4 h-4 text-emerald-500" />;
+      case 'submission': return <FileCode className="w-4 h-4 text-amber-500" />;
+      case 'feedback': return <ClipboardCheck className="w-4 h-4 text-violet-500" />;
       default: return <Bell className="w-4 h-4 text-zinc-400" />;
     }
   };

@@ -919,7 +919,7 @@ function SubmissionCard({ sub, theme, classroom }: SubmissionCardProps & { theme
         actor_id: classroom.teacherId,
         actor_name: teacherProfile?.name || 'Teacher',
         actor_avatar: teacherProfile?.photo_url || classroom.teacherId,
-        type: status === 'correct' ? 'follow' : 'comment',
+        type: 'feedback',
         content: `graded your ${sub.problemTitle || 'assignment'} as ${status}`,
         resource_id: classroom.id
       });
