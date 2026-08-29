@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase, isPlaceholderConfig } from '../lib/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Code2, ArrowRight } from 'lucide-react';
+import { Code2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import { UserRole } from '../types';
 
@@ -135,9 +135,12 @@ export default function RegisterPage() {
           </div>
 
           <div className="p-8 pb-4 relative z-10">
-            <div className="bg-white p-1.5 rounded-xl w-fit shadow-2xl mb-8 rotate-[-5deg]">
+            <Link to="/" className="bg-white p-1.5 rounded-xl w-fit shadow-2xl mb-8 rotate-[-5deg] block hover:rotate-0 transition-transform duration-300">
               <Code2 className="w-6 h-6 text-blue-600" />
-            </div>
+            </Link>
+            <Link to="/" className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white/80 transition-colors mb-4">
+              <ArrowLeft className="w-3 h-3" /> Back to Home
+            </Link>
             <h1 className="font-display text-3xl lg:text-4xl font-black tracking-tighter leading-none text-white">
               JOIN<br />
               <span className="text-blue-500">NOW.</span>

@@ -1,6 +1,99 @@
-# LEVELUP | The Ultra-High Performance Coding Classroom 🚀
+# LEVELUP | The Real-Time, AI-Guided Coding Classroom 🚀
 
-**LEVELUP** is a next-generation engineering education platform designed to bridge the gap between "tutorial hell" and professional mastery. It provides a real-time, consolidated environment where students and teachers collaborate on code, augmented by intelligent AI guidance from Google Gemini and a robust real-time backend powered by Supabase.
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white&labelColor=18181B)
+![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white&labelColor=18181B)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Realtime-3ECF8E?logo=supabase&logoColor=white&labelColor=18181B)
+![Gemini](https://img.shields.io/badge/AI-Google%20Gemini-8E75FF?logo=googlegemini&logoColor=white&labelColor=18181B)
+![License](https://img.shields.io/badge/License-MIT-D4D4D8?labelColor=18181B)
+
+**LEVELUP** is a real-time, AI-guided coding classroom that closes the feedback gap in programming education — from days down to seconds — by giving every institution, regardless of budget, near one-on-one mentorship quality.
+
+---
+
+## 📑 Table of Contents
+
+- [The Problem](#-the-problem-fragmented-learning)
+- [The Solution](#-the-solution-a-unified-real-time-workspace)
+- [How It Works](#-how-it-works)
+- [Features](#-features)
+- [Screenshots](#-screenshots)
+- [Technical Architecture & Stack](#-technical-architecture--stack)
+- [Getting Started](#-getting-started)
+- [Security Model](#-security-model)
+- [Keeping the Database Alive](#-keeping-the-database-alive-supabase-free-tier)
+- [Key Design Decisions](#-key-design-decisions)
+
+---
+
+## 🔴 The Problem: Fragmented Learning
+
+Traditional coding education suffers from **cognitive load overload**. Students typically juggle four or more disconnected tools at once:
+
+| Tool | Problem |
+|---|---|
+| Screen share (Zoom/Meet) | Laggy, low resolution, one-directional |
+| Local IDE (VS Code/IntelliJ) | Configured differently for every student, invisible to the teacher |
+| Documentation | Scattered across endless browser tabs |
+| Chat (Discord/Slack/Email) | Feedback is delayed, often by days |
+
+This context-switching friction destroys the learner's flow state, and delays the one thing that actually prevents a struggling student from disengaging: **immediate, tactical feedback**.
+
+## 🟢 The Solution: A Unified Real-Time Workspace
+
+LEVELUP consolidates live demonstration, structured assignments, a synchronized code editor, an AI teaching assistant, and instructor feedback into **one single-source-of-truth workspace** — eliminating tool-switching friction and cutting the feedback loop from days to seconds.
+
+## ⚙️ How It Works
+
+### Student Flow
+1. **Join** a classroom instantly with a teacher-provided room code — no local setup required.
+2. **Code** in a live-synced, in-browser editor (Monaco — the engine behind VS Code).
+3. **Get unstuck** by asking the AI tutor, which reads the actual assignment and your current code to give a logic hint — never the full answer.
+4. **Submit** the assignment directly from the classroom.
+5. **Get feedback** the moment the teacher reviews it — pushed instantly, not on next login.
+
+### Teacher Flow
+1. **Create** a classroom and post assignments with starter code, sample input/output, and difficulty level.
+2. **Watch** every enrolled student's code update live on a single roster dashboard — no need to walk around a physical room or wait for a submission.
+3. **Intervene** the moment a student stalls, instead of finding out days later during grading.
+4. **Grade** submissions inline and trigger an instant notification back to the student.
+
+## ⚡ Features
+
+| Feature | What It Does | Problem It Solves |
+|---|---|---|
+| **Real-Time Synced Classroom** | Monaco-based editor streams a student's code to their teacher via WebSocket subscriptions, throttled to avoid overloading the database | Eliminates the blind spot between what a student writes and what a teacher can see |
+| **AI-Powered Guided Discovery Tutor** | Reads the specific assignment + live code buffer, then generates a hint that points at the logical flaw — never the solution | Instant, always-available first-line debugging help without giving away answers |
+| **Live Teacher Roster & Feedback** | Every student's live status (idle / working / submitted) on one dashboard, with inline grading | Cuts the feedback loop from days to seconds |
+| **Peer Learning Hub** | Opt-in social layer — students share progress, follow peers, comment | Sustains engagement and accountability between sessions |
+| **Multi-Channel Notifications** | Real-time push notifications for grading, follows, likes, comments | No need to check five different apps to know what happened |
+| **Row Level Security on Every Table** | Postgres RLS scopes every table so a student can only see their own live code, and only their own teacher can see it | Live student code and feedback data are never exposed to the wrong user |
+
+## 📸 Screenshots
+
+<!--
+  Add your own screenshots here — drop image files into docs/screenshots/
+  and update the paths below. Recommended shots: the live-synced editor
+  mid-session, the AI hint firing on a real bug, the teacher's live roster,
+  and the Peer Hub feed.
+-->
+
+| | |
+|---|---|
+| **Live Synced Classroom** <br> ![Live Classroom](docs/screenshots/classroom.png) | **AI Guided-Discovery Hint** <br> ![AI Hint](docs/screenshots/ai-hint.png) |
+| **Teacher Live Roster** <br> ![Teacher Roster](docs/screenshots/teacher-roster.png) | **Peer Hub** <br> ![Peer Hub](docs/screenshots/peer-hub.png) |
+
+## 🛠 Technical Architecture & Stack
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | React 18 + TypeScript | UI management with strict type safety for complex entities |
+| **Styling** | Tailwind CSS v4 | Utility-first styling for a "technical" and consistent aesthetic |
+| **Backend** | Supabase (PostgreSQL) | Auth, database, and real-time row-level subscriptions |
+| **Real-Time** | Supabase Realtime | Instant synchronization of code, notifications, and social activity |
+| **AI Engine** | Google Gemini API | Logic-based tutoring and hints, called via a server-side proxy |
+| **Code Editor** | Monaco Editor | The same editor engine that powers VS Code |
+| **Motion** | Framer Motion | Fluid route transitions and layout animations |
+| **Icons** | Lucide React | Professional, high-density iconography |
 
 ---
 
@@ -35,98 +128,6 @@ The app will be available at `http://localhost:5173`.
 npm run build
 npm run start
 ```
-
-### Keeping the Database Alive
-See [Keeping the Database Alive](#-keeping-the-database-alive-supabase-free-tier) below to enable the included keep-alive GitHub Action.
-
-## 🔴 The Problem: Fragmented Learning
-Traditional coding education suffers from **Cognitive Load Overload**. Students typically juggle:
-1.  **Teacher's Screen Share:** (Zoom/Meet, often laggy or low res)
-2.  **Local IDE:** (VS Code/IntelliJ, often configured differently)
-3.  **Documentation:** (Endless browser tabs)
-4.  **Communication:** (Discord/Slack/Email for feedback)
-
-This context-switching friction destroys the "flow state" and makes it nearly impossible for teachers to provide the immediate, tactical feedback that prevents students from getting permanently stuck.
-
-## 🟢 The Solution: The Unified Workspace
-LEVELUP solves this by creating a **Single Source of Truth**. By consolidating live demonstrations, structured assignments, a real-time editor, social learning, and AI-powered tutoring into one high-performance interface, we eliminate the friction of modern learning.
-
----
-
-## ⚡ Core Features (What Makes it Different)
-
-### 1. Real-Time Peer Hub (Momentum)
-A social-engineering ecosystem where students share progress, milestones, and "momentum" updates.
-*   **Discovery Mode:** Search and connect with fellow engineers across the globe.
-*   **Engagement:** Like, comment, and follow peers to build a professional learning network.
-*   **Authentic Profiles:** No generic placeholders. Every profile is a clean slate, built as the student grows.
-
-### 2. Multi-Channel Notification System
-Stay in the loop without checking 5 different apps.
-*   **Instant Alerts:** Real-time push notifications for follows, likes, and comments.
-*   **Teacher Feedback:** Immediate alerts when an assignment is graded or marked for review.
-*   **Global Hub:** A dedicated activity feed to track your professional growth trajectory.
-
-### 3. AI-Powered "Guided Discovery" Tutor
-Integrated with **Google Gemini (3-Flash)** to act as a mentor, not a cheat sheet.
-*   **Logic Hints:** The AI is programmed to identify logic errors and provide hints that lead students to the answer, rather than just providing the code.
-*   **Context-Aware:** Analyzes the specific assignment requirements and the student's current code buffer.
-
-### 4. Professional High-Density UI
-Designed for engineers by engineers.
-*   **Compact Architecture:** Optimized font scales and reduced padding ensure maximum information density without visual clutter.
-*   **Focus Mode:** A single-click toggle to collapse non-essential UI, expanding the editor for deep-work sessions.
-*   **Fluid Animations:** Powered by Framer Motion for hardware-accelerated transitions that feel like a desktop app.
-
----
-
-## 🛠 Technical Architecture & Stack
-
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Frontend** | React 18 + TypeScript | UI management with strict type safety for complex entities. |
-| **Styling** | Tailwind CSS v4 | Utility-first styling for a "technical" and consistent aesthetic. |
-| **Backend** | Supabase (PostgreSQL) | Auth, Database, and Real-time row-level subscriptions. |
-| **Real-Time** | Supabase Realtime | Instant synchronization of notifications and social activity. |
-| **AI Engine** | Google Gemini API | Logic-based tutoring and smart hints via `@google/generai`. |
-| **Motion** | Framer Motion | Fluid route transitions and sidebar layout animations. |
-| **Icons** | Lucide React | Professional, high-density iconography. |
-
----
-
-## 🔄 User Journey: From Zeros to Heroes
-
-### The Student Journey
-Students land on a consolidated dashboard showing their current class status and active missions. They can enter the **Peer Hub** to see what their classmates are building, follow mentors, and get "momentum" from likes on their updates. When it's time to code, they enter the **Classroom**, where a live-synced editor and Gemini-powered tutor help them navigate complex technical challenges.
-
-### The Teacher Journey
-As classroom administrators, teachers deploy assignments with specific technical requirements and resources. They have a **Live Roster View** where they can see student submissions manifest in real-time. They can provide granular feedback, moving assignments between "Needs Review" and "Completed" states, which triggers instant notifications to the students.
-
----
-
-## ⚙️ Deep Dive: Technical Implementation
-
-### Real-Time Notification Logic
-We leverage **Supabase `postgres_changes`** subscriptions to build a non-polling notification system.
-```typescript
-// Subscription logic in NotificationPopover.tsx
-const channel = supabase
-  .channel(`notifications:${user.id}`)
-  .on('postgres_changes', { 
-    event: 'INSERT', 
-    schema: 'public', 
-    table: 'notifications',
-    filter: `user_id=eq.${user.id}` 
-  }, (payload) => {
-    // Immediate UI update without refresh
-    setNotifications(prev => [payload.new, ...prev]);
-    setUnreadCount(prev => prev + 1);
-  })
-  .subscribe();
-```
-
-### High-Density Design System
-We moved away from the "standard" 16px font-size defaults. By utilizing a **12px-14px primary scale** with tight letter spacing and zinc-based neutrals, we've created a UI that feels like a professional IDE. This maximizes the screen real estate available for code and documentation.
 
 ---
 

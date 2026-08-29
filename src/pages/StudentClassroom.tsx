@@ -174,7 +174,18 @@ export default function StudentClassroom({
         .order('created_at', { ascending: false });
       
       if (data) {
-        const probs = data as unknown as Problem[];
+        const probs = data.map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          type: row.type,
+          language: row.language,
+          instructionsUrl: row.instructions_url,
+          starterCode: row.starter_code,
+          sampleInput: row.sample_input,
+          expectedOutput: row.expected_output,
+          createdAt: row.created_at,
+        })) as Problem[];
         setProblems(probs);
         if (probs.length > 0 && !selectedProblem) {
           setSelectedProblem(probs[0]);
@@ -197,7 +208,13 @@ export default function StudentClassroom({
         .select('*')
         .eq('classroom_id', classroom.id)
         .order('created_at', { ascending: false });
-      if (data) setResources(data as unknown as Resource[]);
+      if (data) setResources(data.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        url: row.url,
+        type: row.type,
+        createdAt: row.created_at,
+      })) as Resource[]);
     };
 
     const resourceSub = supabase

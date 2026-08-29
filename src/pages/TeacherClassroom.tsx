@@ -95,7 +95,18 @@ export default function TeacherClassroom({
         .select('*')
         .eq('classroom_id', classroom.id)
         .order('created_at', { ascending: false });
-      if (data) setProblems(data as unknown as Problem[]);
+      if (data) setProblems(data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        type: row.type,
+        language: row.language,
+        instructionsUrl: row.instructions_url,
+        starterCode: row.starter_code,
+        sampleInput: row.sample_input,
+        expectedOutput: row.expected_output,
+        createdAt: row.created_at,
+      })) as Problem[]);
     };
 
     const problemSub = supabase
@@ -174,7 +185,13 @@ export default function TeacherClassroom({
         .select('*')
         .eq('classroom_id', classroom.id)
         .order('created_at', { ascending: false });
-      if (data) setResources(data as unknown as Resource[]);
+      if (data) setResources(data.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        url: row.url,
+        type: row.type,
+        createdAt: row.created_at,
+      })) as Resource[]);
     };
 
     const resourceSub = supabase
@@ -208,8 +225,8 @@ export default function TeacherClassroom({
           >
             <div className="flex items-center gap-4 mb-2">
               <h1 className={cn("font-display font-bold text-3xl tracking-tighter leading-none", theme === 'light' ? "text-zinc-950" : "text-white")}>{classroom.className}</h1>
-              <div className={cn("px-3 py-1 rounded-xl border", theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900 border-zinc-800")}>
-                <span className={cn("text-xs font-mono font-bold tracking-widest", theme === 'light' ? "text-zinc-600" : "text-zinc-400")}>{classroom.roomCode}</span>
+              <div className="px-4 py-1.5 rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20">
+                <span className="text-lg font-mono font-black tracking-[0.2em] text-white">{classroom.roomCode}</span>
               </div>
               <div className={cn(
                 "flex items-center gap-1 rounded-xl p-1 border ml-4",

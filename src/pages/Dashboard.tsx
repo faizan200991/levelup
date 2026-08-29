@@ -6,7 +6,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { ClassRoom, DBClassroom } from '../types';
 import Loader from '../components/Loader';
-import { Plus, BookOpen, Activity, ArrowRight, CheckCircle, FileText, Code } from 'lucide-react';
+import { Plus, BookOpen, Activity, ArrowRight, CheckCircle, FileText, Code, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLanguageIcon } from '../lib/utils';
 
@@ -301,6 +301,38 @@ export default function Dashboard() {
         />
       </div>
 
+      <Link to="/ai-tutor" className="block mb-10 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.4 }}
+          className="group relative overflow-hidden rounded-3xl bg-zinc-950 p-6 md:p-7 flex items-center justify-between gap-6 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-500"
+        >
+          <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-600/30 rounded-full blur-3xl group-hover:bg-blue-500/40 transition-colors duration-500" />
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-400 mb-1">
+                {profile?.role === 'teacher' ? 'Need a second opinion?' : 'Stuck on something?'}
+              </p>
+              <h3 className="font-display font-black text-lg md:text-xl text-white tracking-tight">
+                {profile?.role === 'teacher' ? 'Try the AI Tutor yourself' : 'Ask the AI Tutor for a hint'}
+              </h3>
+              <p className="text-zinc-500 text-xs font-medium mt-0.5 hidden sm:block">
+                {profile?.role === 'teacher'
+                  ? 'See exactly what your students see — the same guided-hint engine, from your side of the room.'
+                  : 'Guided debugging that points you to the fix — never just hands you the answer.'}
+              </p>
+            </div>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white group-hover:bg-white group-hover:text-blue-600 transition-all duration-300 shrink-0 relative z-10">
+            <ArrowRight className="w-4 h-4" />
+          </div>
+        </motion.div>
+      </Link>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-5 pb-2 border-b border-zinc-100">
@@ -359,7 +391,7 @@ export default function Dashboard() {
                       </h3>
                       <div className="flex items-center gap-2 text-zinc-400 text-[9px] font-black uppercase tracking-[0.15em]">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                        <span>LIVE // JOINED {new Date(cls.createdAt).toLocaleDateString()}</span>
+                        <span>LIVE // {profile?.role === 'teacher' ? 'CREATED' : 'JOINED'} {new Date(cls.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
 

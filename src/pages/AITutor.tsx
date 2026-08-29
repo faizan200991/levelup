@@ -34,10 +34,11 @@ export default function AITutor() {
     }
   }, [messages, isLoading]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSend = async (overrideText?: string) => {
+    const messageText = (overrideText ?? input).trim();
+    if (!messageText || isLoading) return;
 
-    const userMsg = input.trim();
+    const userMsg = messageText;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsLoading(true);
@@ -138,6 +139,30 @@ export default function AITutor() {
               </motion.div>
             ))}
           </AnimatePresence>
+
+          {messages.length === 1 && !isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="pl-14 flex flex-wrap gap-2"
+            >
+              {[
+                "Why is my loop infinite?",
+                "Explain recursion like I'm new to it",
+                "My code runs but gives the wrong output",
+                "What's the difference between a list and a tuple?",
+              ].map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => handleSend(prompt)}
+                  className="text-xs font-medium px-4 py-2 rounded-full border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 hover:text-zinc-900 hover:shadow-sm transition-all"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </motion.div>
+          )}
           
           {isLoading && (
             <div className="flex items-start gap-4">

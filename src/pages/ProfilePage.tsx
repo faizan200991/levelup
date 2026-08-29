@@ -20,6 +20,8 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [classroomCount, setClassroomCount] = useState(0);
+  const [totalStudentCount, setTotalStudentCount] = useState(0);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -97,8 +99,27 @@ export default function ProfilePage() {
       setFollowingCount(following.count || 0);
       setIsFollowing(!!relationship.data);
     }
+    async function fetchTeacherStats() {
+      if (!uid) return;
+      const { data: classrooms, count } = await supabase
+        .from('classrooms')
+        .select('id', { count: 'exact' })
+        .eq('teacher_id', uid);
+      setClassroomCount(count || 0);
+      const classroomIds = (classrooms || []).map((c) => c.id);
+      if (classroomIds.length > 0) {
+        const { count: studentCount } = await supabase
+          .from('enrollments')
+          .select('student_id', { count: 'exact', head: true })
+          .in('classroom_id', classroomIds);
+        setTotalStudentCount(studentCount || 0);
+      } else {
+        setTotalStudentCount(0);
+      }
+    }
     fetchProfile();
     fetchFollowStats();
+    fetchTeacherStats();
   }, [uid, user]);
 
   const handleFollow = async () => {
@@ -391,15 +412,31 @@ export default function ProfilePage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-zinc-500 pt-2 md:pt-0">
-                            <div className="flex flex-col">
-                              <span className="text-black text-lg">{followingCount}</span>
-                              <span className="text-[8px] opacity-60">Following</span>
-                            </div>
-                            <div className="w-px h-8 bg-zinc-100" />
-                            <div className="flex flex-col">
-                              <span className="text-black text-lg">{followerCount}</span>
-                              <span className="text-[8px] opacity-60">Followers</span>
-                            </div>
+                            {profile.role === 'teacher' ? (
+                              <>
+                                <div className="flex flex-col">
+                                  <span className="text-black text-lg">{classroomCount}</span>
+                                  <span className="text-[8px] opacity-60">Classrooms</span>
+                                </div>
+                                <div className="w-px h-8 bg-zinc-100" />
+                                <div className="flex flex-col">
+                                  <span className="text-black text-lg">{totalStudentCount}</span>
+                                  <span className="text-[8px] opacity-60">Students</span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex flex-col">
+                                  <span className="text-black text-lg">{followingCount}</span>
+                                  <span className="text-[8px] opacity-60">Following</span>
+                                </div>
+                                <div className="w-px h-8 bg-zinc-100" />
+                                <div className="flex flex-col">
+                                  <span className="text-black text-lg">{followerCount}</span>
+                                  <span className="text-[8px] opacity-60">Followers</span>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
