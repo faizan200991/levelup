@@ -145,42 +145,14 @@ Supabase's free tier pauses a project after 7 days with no database activity. Th
 *   `SUPABASE_URL`
 *   `SUPABASE_ANON_KEY`
 
-## 🎓 Technical Interview Prep (Q&A)
+## 🎓 Key Design Decisions
 
-### Q1: How do you handle real-time state without overloading the client?
-**Answer:** "We use Supabase Realtime which utilizes WebSockets. Instead of the client polling the database every few seconds (O(n) complexity), the server pushes only relevant delta changes to the specific user channel. This ensures that a student with 100+ notifications only receives the one they need, keeping memory usage low."
+**Why WebSocket subscriptions instead of polling?** Supabase Realtime uses WebSockets, so the server pushes only relevant delta changes to the specific user's channel instead of the client repeatedly checking for updates. A student with 100+ notifications only receives the one they need, keeping bandwidth and memory usage low as the number of concurrent users grows.
 
-### Q2: Why Framer Motion for the Focus Mode?
-**Answer:** "CSS transitions often trigger layout 'snapping' because they don't know about the final geometry of child elements. Framer Motion's `layout` prop uses the FLIP (First, Last, Invert, Play) technique, calculating the delta in milliseconds and applying hardware-accelerated transforms. This results in a 60fps expansion of the code editor that feels native."
+**Why Framer Motion for Focus Mode?** CSS transitions alone don't account for the final geometry of child elements, which causes layout "snapping." Framer Motion's `layout` prop uses the FLIP (First, Last, Invert, Play) technique to calculate the delta and apply hardware-accelerated transforms, giving a smooth 60fps expansion of the code editor.
 
-### Q3: How is the AI Tutor's 'Non-Cheating' behavior enforced?
-**Answer:** "System prompting. We pass a 'System Instruction' to the Gemini-3-Flash model stating: 'You are a master technical mentor. Your goal is to guide students to an answer by identifying the logical flaw in their code. NEVER provide the full solution block.' This ensures the pedagogic value is preserved."
+**How is the AI tutor's "no direct answers" behavior enforced?** Via explicit system instruction to the Gemini model: it is told to identify the logical flaw in the student's code and guide them toward the fix without ever supplying the corrected code block. This is a deliberate constraint, not an incidental behavior — most AI coding assistants optimize for producing correct code fast, which is the wrong incentive for learning.
 
 ---
 
-## 📈 Social Impact: LinkedIn Draft
-
-**Headline: Why I built LEVELUP: Fixing the "Copy-Paste" Education Crisis 🚀**
-
-I’m thrilled to introduce **LEVELUP**, a platform I’ve been developing to transform how we teach engineering. 💻
-
-Modern coding education is broken. We watch a video, we copy a tutorial, we get stuck on a typo, and we quit. I wanted to build something that feels like the cockpit of a high-performance jet, not a slow-moving classroom.
-
-**Key Innovations:**
-✅ **Real-Time Synergy:** Teacher feedback, peer momentum, and notifications happen INSTANTLY via Supabase.
-✅ **AI Mentorship:** Integrated Gemini-3-Flash moves students from frustration to "Aha!" moments by explaining logic, not just fixing bugs.
-✅ **Engineering-First UI:** A high-density, compact workspace designed for serious engineering.
-✅ **Community Hub:** Follow peers, share momentum, and build your network while you learn.
-
-We aren't just teaching syntax; we're building the next generation of engineers. 
-
-Check out the evolution here: [Insert Link]
-
-#EdTech #Engineering #ReactJS #Supabase #AI #Gemini #WebDevelopment #TypeScript #FutureOfLearning
-
----
-
-Developed with ⚡ to help students learn faster and get hired.
-// force vercel rebuild 
-// fix vercel trigger 
-// trigger vercel redeploy 
+Developed to help students learn faster with immediate, always-available feedback.
