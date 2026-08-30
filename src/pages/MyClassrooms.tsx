@@ -156,7 +156,7 @@ export default function MyClassrooms() {
                     {cls.language ? (
                       <img 
                         src={getLanguageIcon(cls.language)} 
-                        alt="" 
+                        alt={cls.language} 
                         className="w-full h-full object-contain"
                         referrerPolicy="no-referrer"
                       />

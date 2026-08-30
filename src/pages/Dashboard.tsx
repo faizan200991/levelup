@@ -6,7 +6,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { ClassRoom, DBClassroom } from '../types';
 import Loader from '../components/Loader';
-import { Plus, BookOpen, Activity, ArrowRight, CheckCircle, FileText, Code, Sparkles } from 'lucide-react';
+import { Plus, BookOpen, Activity, ArrowRight, CheckCircle, FileText, Code, Sparkles, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn, getLanguageIcon } from '../lib/utils';
 
@@ -27,7 +27,7 @@ export default function Dashboard() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [classes, setClasses] = useState<(ClassRoom & { language?: string; problemCount?: number; studentCount?: number })[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [roomCode, setRoomCode] = useState(() => searchParams.get('join')?.toUpperCase() || '');
@@ -72,7 +72,7 @@ export default function Dashboard() {
         createdAt: c.created_at
       } as ClassRoom));
 
-      // Fetch most recent problem language for each class to show icon
+      // Fetch most recent problem language + counts for each class to show on the card
       const classesWithLanguage = await Promise.all(formattedClasses.map(async (cls) => {
         const { data: prob } = await supabase
           .from('problems')
@@ -81,8 +81,18 @@ export default function Dashboard() {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+
+        const { count: problemCount } = await supabase
+          .from('problems')
+          .select('*', { count: 'exact', head: true })
+          .eq('classroom_id', cls.id);
+
+        const { count: studentCount } = await supabase
+          .from('enrollments')
+          .select('*', { count: 'exact', head: true })
+          .eq('classroom_id', cls.id);
         
-        return { ...cls, language: prob?.language };
+        return { ...cls, language: prob?.language, problemCount: problemCount ?? 0, studentCount: studentCount ?? 0 };
       }));
       
       setClasses(classesWithLanguage);
@@ -368,7 +378,7 @@ export default function Dashboard() {
                         {cls.language ? (
                           <img 
                             src={getLanguageIcon(cls.language)} 
-                            alt="" 
+                            alt={cls.language} 
                             className="w-full h-full object-contain brightness-0 invert"
                             referrerPolicy="no-referrer"
                           />
@@ -389,9 +399,19 @@ export default function Dashboard() {
                       <h3 className="font-display font-black text-lg text-zinc-900 tracking-tight mb-2 leading-tight group-hover:text-blue-600 transition-colors">
                         {cls.className}
                       </h3>
-                      <div className="flex items-center gap-2 text-zinc-400 text-[9px] font-black uppercase tracking-[0.15em]">
+                      <div className="flex items-center gap-2 text-zinc-400 text-[9px] font-black uppercase tracking-[0.15em] mb-3">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                         <span>LIVE // {profile?.role === 'teacher' ? 'CREATED' : 'JOINED'} {new Date(cls.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <FileText className="w-3 h-3 text-zinc-300" />
+                          <span className="text-[10px] font-bold text-zinc-500">{cls.problemCount ?? 0} {(cls.problemCount ?? 0) === 1 ? 'assignment' : 'assignments'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-3 h-3 text-zinc-300" />
+                          <span className="text-[10px] font-bold text-zinc-500">{cls.studentCount ?? 0} {(cls.studentCount ?? 0) === 1 ? 'student' : 'students'}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -453,7 +473,7 @@ export default function Dashboard() {
                               {act.language ? (
                                 <img 
                                   src={getLanguageIcon(act.language)} 
-                                  alt="" 
+                                  alt={act.language} 
                                   className="w-full h-full object-contain"
                                   referrerPolicy="no-referrer"
                                />

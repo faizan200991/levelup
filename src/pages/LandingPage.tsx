@@ -285,6 +285,18 @@ function ScrollToTop() {
 }
 
 export default function LandingPage() {
+  const [showNavCTAs, setShowNavCTAs] = useState(false);
+
+  useEffect(() => {
+    const toggleNavCTAs = () => {
+      // Reveal nav CTAs once the hero's own CTAs have scrolled out of view,
+      // so there's never a moment with two duplicate CTA pairs on screen.
+      setShowNavCTAs(window.pageYOffset > window.innerHeight * 0.7);
+    };
+    window.addEventListener("scroll", toggleNavCTAs);
+    return () => window.removeEventListener("scroll", toggleNavCTAs);
+  }, []);
+
   return (
     <div className="min-h-screen bg-white selection:bg-zinc-900 selection:text-white">
       <ScrollToTop />
@@ -297,12 +309,22 @@ export default function LandingPage() {
             </div>
             <span className="font-display font-bold text-xl tracking-tighter text-black uppercase">LEVELUP</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/login" className="bg-white text-black px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-zinc-200 shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.1)] hover:bg-white transition-all transform hover:-translate-y-0.5">Sign In</Link>
-            <Link to="/register">
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 h-10 shadow-lg shadow-blue-100 font-bold border-none transition-all hover:scale-105">Get Started</Button>
-            </Link>
-          </div>
+          <AnimatePresence>
+            {showNavCTAs && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+                className="flex items-center gap-4"
+              >
+                <Link to="/login" className="bg-white text-black px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border border-zinc-200 shadow-[0_4px_15px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.1)] hover:bg-white transition-all transform hover:-translate-y-0.5">Sign In</Link>
+                <Link to="/register">
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 h-10 shadow-lg shadow-blue-100 font-bold border-none transition-all hover:scale-105">Get Started</Button>
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </nav>
 

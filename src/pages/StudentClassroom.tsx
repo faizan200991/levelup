@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { ClassRoom, Problem, Submission, Resource, UserProfile } from '../types';
 import { Button } from '../components/Button';
-import { cn, getLanguageIcon } from '../lib/utils';
+import { cn, getLanguageIcon, formatRelativeTime } from '../lib/utils';
 import { 
   Play, 
   ChevronRight, 
@@ -63,6 +63,15 @@ export default function StudentClassroom({
   const [resources, setResources] = useState<Resource[]>([]);
   const [activePanel, setActivePanel] = useState<'problem' | 'resources' | 'leaderboard'>('problem');
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+
+  // On small/medium screens, default the sidebar to closed so the editor
+  // (the actual coding surface) is what mobile/tablet users see first,
+  // instead of a 380px panel eating the whole narrow viewport.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsSidebarVisible(false);
+    }
+  }, []);
   const [teacherProfile, setTeacherProfile] = useState<UserProfile | null>(null);
   const [xp, setXp] = useState(1250);
   const [level, setLevel] = useState(12);
@@ -91,6 +100,9 @@ export default function StudentClassroom({
   }, [user]);
   
   const lastSyncRef = useRef<number>(0);
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
+  const hintDecorationRef = useRef<any>(null);
 
   const getDefaultCode = (lang: string) => {
     switch (lang) {
@@ -339,6 +351,28 @@ export default function StudentClassroom({
       // Add hint to the console output area
       setOutput(prev => `[AI TUTOR HINT]\n${hint}\n\n${prev}`);
       setActivePanel('problem'); // Ensure they see the description/log area if needed, but we put it in output
+
+      // Highlight the specific line the AI pointed to, if it gave one
+      if (editorRef.current && monacoRef.current) {
+        if (typeof data.line === 'number' && data.line > 0) {
+          const decorations = [{
+            range: new monacoRef.current.Range(data.line, 1, data.line, 1),
+            options: {
+              isWholeLine: true,
+              className: 'ai-hint-line-highlight',
+              glyphMarginClassName: 'ai-hint-glyph',
+              glyphMarginHoverMessage: { value: 'AI Tutor flagged this line' },
+            },
+          }];
+          hintDecorationRef.current = editorRef.current.createDecorationsCollection
+            ? editorRef.current.createDecorationsCollection(decorations)
+            : editorRef.current.deltaDecorations(hintDecorationRef.current ? [hintDecorationRef.current] : [], decorations);
+          editorRef.current.revealLineInCenter(data.line);
+        } else if (hintDecorationRef.current) {
+          if (hintDecorationRef.current.clear) hintDecorationRef.current.clear();
+          hintDecorationRef.current = null;
+        }
+      }
     } catch (err) {
       console.error('AI Hint Error:', err);
       setOutput(prev => `[AI Error] Could not get a hint. ${prev}`);
@@ -464,7 +498,7 @@ export default function StudentClassroom({
     )}>
       {/* Premium Header */}
       <header className={cn(
-        "h-14 backdrop-blur-3xl border-b px-6 flex items-center justify-between relative z-50 transition-all",
+        "min-h-14 backdrop-blur-3xl border-b px-4 sm:px-6 flex flex-wrap items-center justify-between gap-y-2 py-2 relative z-50 transition-all",
         theme === 'light' ? "bg-white/80 border-zinc-200" : "bg-zinc-950/80 border-zinc-900"
       )}>
         <div className="flex items-center gap-4">
@@ -482,8 +516,8 @@ export default function StudentClassroom({
           </Link>
           <div className={cn("h-5 w-px", theme === 'light' ? "bg-zinc-200" : "bg-zinc-800")} />
           <div className="flex items-center gap-2.5">
-            <h1 className={cn("font-display font-bold text-base tracking-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>{classroom.className}</h1>
-            <div className={cn("px-2 py-0.5 rounded-md border", theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900 border-zinc-800")}>
+            <h1 className={cn("font-display font-bold text-base tracking-tight truncate max-w-[140px] sm:max-w-none", theme === 'light' ? "text-zinc-950" : "text-white")}>{classroom.className}</h1>
+            <div className={cn("px-2 py-0.5 rounded-md border hidden sm:block", theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-900 border-zinc-800")}>
                <span className={cn("text-[9px] font-mono uppercase tracking-widest", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>{classroom.roomCode}</span>
             </div>
           </div>
@@ -505,7 +539,7 @@ export default function StudentClassroom({
         <div className="flex items-center gap-3">
           {/* XP & Level Indicator */}
           <div className={cn(
-            "flex items-center gap-4 px-4 py-1.5 rounded-2xl border transition-all",
+            "hidden lg:flex items-center gap-4 px-4 py-1.5 rounded-2xl border transition-all",
             theme === 'light' ? "bg-white border-zinc-200" : "bg-zinc-900 border-zinc-800"
           )}>
             <div className="flex flex-col items-end">
@@ -532,19 +566,19 @@ export default function StudentClassroom({
           )}>
             <button 
               onClick={() => setTheme('light')} 
-              className={cn("p-1.5 rounded-md transition-all flex items-center gap-2 px-3", theme === 'light' ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-950")}
+              className={cn("p-1.5 rounded-md transition-all flex items-center gap-2 px-2 sm:px-3", theme === 'light' ? "bg-white text-zinc-950 shadow-sm" : "text-zinc-500 hover:text-zinc-950")}
               title="Light Theme"
             >
               <Sun className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold">Light</span>
+              <span className="text-[10px] font-bold hidden sm:inline">Light</span>
             </button>
             <button 
               onClick={() => setTheme('vs-dark')} 
-              className={cn("p-1.5 rounded-md transition-all flex items-center gap-2 px-3", theme === 'vs-dark' ? "bg-zinc-800 text-white shadow-lg" : "text-zinc-500 hover:text-white")}
+              className={cn("p-1.5 rounded-md transition-all flex items-center gap-2 px-2 sm:px-3", theme === 'vs-dark' ? "bg-zinc-800 text-white shadow-lg" : "text-zinc-500 hover:text-white")}
               title="Dark Theme"
             >
               <Moon className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold">Dark</span>
+              <span className="text-[10px] font-bold hidden sm:inline">Dark</span>
             </button>
           </div>
 
@@ -553,7 +587,7 @@ export default function StudentClassroom({
               "rounded-xl group transition-all text-xs border border-transparent",
               theme === 'light' ? "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100 hover:border-zinc-200" : "text-zinc-400 hover:text-white hover:bg-white/5 hover:border-zinc-800"
             )}>
-              <Sparkles className="w-3.5 h-3.5 mr-2 text-amber-500 group-hover:scale-125 transition-transform" /> AI Tutor
+              <Sparkles className="w-3.5 h-3.5 md:mr-2 text-amber-500 group-hover:scale-125 transition-transform" /> <span className="hidden md:inline">AI Tutor</span>
             </Button>
           </Link>
           
@@ -569,7 +603,7 @@ export default function StudentClassroom({
               className="text-amber-500 hover:bg-amber-500/10 rounded-xl transition-all h-8"
               title="Get a hint from AI"
             >
-              <Sparkles className="w-3.5 h-3.5 mr-2" /> Hint
+              <Sparkles className="w-3.5 h-3.5 sm:mr-2" /> <span className="hidden sm:inline">Hint</span>
             </Button>
             <div className={cn("w-px h-4 mx-1", theme === 'light' ? "bg-zinc-200" : "bg-zinc-800")} />
             <Button 
@@ -579,7 +613,7 @@ export default function StudentClassroom({
               isLoading={isRunning}
               className="text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-all h-8"
             >
-              <Play className="w-3.5 h-3.5 mr-2 fill-emerald-500" /> Run
+              <Play className="w-3.5 h-3.5 sm:mr-2 fill-emerald-500" /> <span className="hidden sm:inline">Run</span>
             </Button>
             <Button 
               size="md" 
@@ -597,6 +631,13 @@ export default function StudentClassroom({
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
+        {/* Backdrop — closes the sidebar overlay on small/medium screens when tapped outside it */}
+        {isSidebarVisible && (
+          <div
+            onClick={() => setIsSidebarVisible(false)}
+            className="fixed inset-0 top-14 z-30 bg-black/40 lg:hidden"
+          />
+        )}
         {/* Left Side: Tasks & Resources (Glassmorphism Sidebar) */}
         <motion.div 
           initial={false}
@@ -611,11 +652,12 @@ export default function StudentClassroom({
             opacity: { duration: 0.2 }
           }}
           className={cn(
-            "border-r flex flex-col relative z-40 overflow-hidden transition-colors duration-500 shrink-0",
+            "border-r flex flex-col overflow-hidden transition-colors duration-500 shrink-0",
+            "fixed inset-y-14 left-0 z-40 lg:relative lg:inset-auto lg:z-40",
             theme === 'light' ? "bg-zinc-50 border-zinc-200" : "bg-zinc-950 border-zinc-900"
           )}
         >
-          <div className="w-[380px] flex flex-col h-full"> 
+          <div className="w-[min(380px,88vw)] flex flex-col h-full"> 
             <div className="p-4 pb-2 flex gap-3">
                   <button 
                     onClick={() => setActivePanel('problem')}
@@ -708,7 +750,7 @@ export default function StudentClassroom({
                               ? (theme === 'light' ? "bg-white border-zinc-200 text-zinc-950" : "bg-black border-zinc-800 text-white") 
                               : (theme === 'light' ? "bg-zinc-50 border-zinc-100 text-zinc-950" : "bg-zinc-950 border-zinc-800 text-white")
                           )}>
-                            <img src={getLanguageIcon(p.language)} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            <img src={getLanguageIcon(p.language)} alt={p.language} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                           </div>
                           <div>
                             <p className={cn(
@@ -852,8 +894,11 @@ export default function StudentClassroom({
                             )}>
                               <div className={cn("absolute top-0 left-0 w-1 h-full transition-colors", theme === 'light' ? "bg-zinc-200 group-hover:bg-zinc-950" : "bg-zinc-800 group-hover:bg-white")} />
                               <div className="flex justify-between items-center mb-4">
-                                <span className={cn("text-[11px] font-mono uppercase tracking-widest", theme === 'light' ? "text-zinc-500" : "text-zinc-500")}>
-                                  {new Date(sub.submittedAt).toLocaleTimeString()}
+                                <span 
+                                  className={cn("text-[11px] font-mono uppercase tracking-widest", theme === 'light' ? "text-zinc-500" : "text-zinc-500")}
+                                  title={new Date(sub.submittedAt).toLocaleString()}
+                                >
+                                  {formatRelativeTime(sub.submittedAt)}
                                 </span>
                                 <StatusBadge status={sub.status} theme={theme} />
                               </div>
@@ -916,9 +961,9 @@ export default function StudentClassroom({
                           </div>
                           <div className="w-10 h-10 rounded-2xl overflow-hidden border border-inherit">
                              {student.avatar && student.avatar.startsWith('http') ? (
-                               <img src={student.avatar} alt="" className="w-full h-full object-cover" />
+                               <img src={student.avatar} alt={`${student.name}'s avatar`} className="w-full h-full object-cover" />
                              ) : (
-                               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.avatar}`} alt="" className="w-full h-full object-cover" />
+                               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.avatar}`} alt={`${student.name}'s avatar`} className="w-full h-full object-cover" />
                              )}
                           </div>
                           <div>
@@ -1052,8 +1097,20 @@ export default function StudentClassroom({
                 theme={theme}
                 language={selectedProblem?.language || 'python'}
                 value={code}
-                onChange={(value) => setCode(value || '')}
-              onMount={(editor) => {
+                onChange={(value) => {
+                  setCode(value || '');
+                  if (hintDecorationRef.current) {
+                    if (hintDecorationRef.current.clear) {
+                      hintDecorationRef.current.clear();
+                    } else if (editorRef.current) {
+                      editorRef.current.deltaDecorations([hintDecorationRef.current], []);
+                    }
+                    hintDecorationRef.current = null;
+                  }
+                }}
+              onMount={(editor, monacoInstance) => {
+                editorRef.current = editor;
+                monacoRef.current = monacoInstance;
                 editor.updateOptions({
                    fontFamily: "'JetBrains Mono', monospace",
                    fontSize: 14,
@@ -1069,6 +1126,7 @@ export default function StudentClassroom({
                    bracketPairColorization: { enabled: true },
                    guides: { indentation: true },
                    renderLineHighlight: 'all',
+                   glyphMargin: true,
                    padding: { top: 40, bottom: 40 }
                 });
               }}

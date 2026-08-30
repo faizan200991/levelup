@@ -158,7 +158,7 @@ export default function NotificationsPage() {
                   <div className="w-16 h-16 rounded-[1.5rem] overflow-hidden border-2 border-zinc-50 shadow-xl group-hover:scale-105 transition-transform duration-500">
                     <img 
                       src={n.actor_avatar && n.actor_avatar.startsWith('http') ? n.actor_avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${n.actor_avatar || n.actor_name}`} 
-                      alt="" 
+                      alt={`${n.actor_name}'s avatar`} 
                       className="w-full h-full object-cover" 
                     />
                   </div>

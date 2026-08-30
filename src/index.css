@@ -57,3 +57,16 @@
     text-wrap: balance;
   }
 }
+
+/* AI Tutor hint: highlights the specific line the model flagged as the
+   likely source of a logic error, and marks it in the glyph margin. */
+.ai-hint-line-highlight {
+  background-color: rgba(59, 130, 246, 0.14) !important;
+  border-left: 3px solid #3b82f6 !important;
+}
+.ai-hint-glyph {
+  background-color: #3b82f6;
+  width: 6px !important;
+  margin-left: 6px;
+  border-radius: 3px;
+}

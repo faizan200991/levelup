@@ -473,9 +473,9 @@ export default function PeerHub() {
                           <Link to={`/profile/${post.author_id}`} className="flex items-center gap-4 group/author">
                             <div className="w-11 h-11 rounded-xl overflow-hidden border-2 border-zinc-50 shadow-sm relative shrink-0">
                                {post.author_avatar && post.author_avatar.startsWith('http') ? (
-                                 <img src={post.author_avatar} alt="" className="w-full h-full object-cover group-hover/author:scale-110 transition-transform duration-500" />
+                                 <img src={post.author_avatar} alt={`${post.author_name}'s avatar`} className="w-full h-full object-cover group-hover/author:scale-110 transition-transform duration-500" />
                                ) : (
-                                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_avatar || post.author_name}`} alt="" className="w-full h-full object-cover group-hover/author:scale-110 transition-transform duration-500" />
+                                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_avatar || post.author_name}`} alt={`${post.author_name}'s avatar`} className="w-full h-full object-cover group-hover/author:scale-110 transition-transform duration-500" />
                                )}
                                <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover/author:opacity-100 transition-opacity" />
                             </div>
@@ -633,7 +633,7 @@ export default function PeerHub() {
                             <div className="w-20 h-20 rounded-3xl overflow-hidden border-4 border-zinc-50 shadow-sm relative">
                               <img 
                                 src={peer.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${peer.id}`} 
-                                alt="" 
+                                alt={`${peer.name}'s avatar`} 
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                               />
                             </div>

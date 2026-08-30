@@ -40,21 +40,41 @@ export default async function handler(req: Request, res: Response) {
       }
     });
 
+    const numberedCode = String(code)
+      .split('\n')
+      .map((line: string, i: number) => `${i + 1}: ${line}`)
+      .join('\n');
+
     const prompt = `You are a helpful coding tutor. A student is working on the following problem and is stuck.
 Problem Title: ${problemTitle}
 Problem Description: ${problemDescription || "No explicit description provided."}
-Student's Current Code (${language || "JavaScript"}):
-${code}
+Student's Current Code (${language || "JavaScript"}), with line numbers prefixed:
+${numberedCode}
 
-Please provide a helpful, encouraging hint. Do NOT give the full solution. Focus on pointing out logic errors, suggesting a next step, or explaining a concept they might be missing. Keep it concise.`;
+Please provide a helpful, encouraging hint. Do NOT give the full solution. Focus on pointing out logic errors, suggesting a next step, or explaining a concept they might be missing. Keep it concise.
+
+Respond ONLY with a single JSON object, no markdown fences, no other text, in exactly this shape:
+{"hint": "your hint text here", "line": <the 1-based line number most responsible for the issue, or null if there isn't one specific line>}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash',
       contents: [{ parts: [{ text: prompt }] }],
     });
 
-    const reply = response.text || "I'm sorry, I couldn't think of a hint right now. Try reviewing the problem requirements!";
-    return res.status(200).json({ text: reply });
+    const raw = response.text || '';
+    let hint = "I'm sorry, I couldn't think of a hint right now. Try reviewing the problem requirements!";
+    let line: number | null = null;
+    try {
+      const cleaned = raw.trim().replace(/^```json\s*|^```\s*|```$/g, '');
+      const parsed = JSON.parse(cleaned);
+      if (parsed.hint) hint = parsed.hint;
+      if (typeof parsed.line === 'number' && parsed.line > 0) line = parsed.line;
+    } catch {
+      // Model didn't return valid JSON — fall back to using the raw text as the hint, no line highlight
+      if (raw.trim()) hint = raw.trim();
+    }
+
+    return res.status(200).json({ text: hint, line });
 
   } catch (error: unknown) {
     const err = error as Error;

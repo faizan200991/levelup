@@ -27,7 +27,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Editor } from '@monaco-editor/react';
-import { cn, getLanguageIcon } from '../lib/utils';
+import { cn, getLanguageIcon, formatRelativeTime } from '../lib/utils';
 
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -457,7 +457,7 @@ export default function TeacherClassroom({
                       )}>
                         <img 
                           src={getLanguageIcon(prob.language)} 
-                          alt="" 
+                          alt={prob.language} 
                           className="w-full h-full object-contain"
                           referrerPolicy="no-referrer"
                         />
@@ -746,7 +746,7 @@ function ClassHeatmap({ problems, submissions, liveCodes, theme }: { problems: P
                       <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-900 shadow-lg shrink-0">
                         <img 
                           src={student.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.id}`} 
-                          alt="" 
+                          alt={`${student.name}'s avatar`} 
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
                         />
@@ -966,7 +966,7 @@ function SubmissionCard({ sub, theme, classroom }: SubmissionCardProps & { theme
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center p-1 shadow-2xl">
               <img 
                 src={getLanguageIcon(sub.language)} 
-                alt="" 
+                alt={sub.language} 
                 className="w-full h-full object-contain"
                 referrerPolicy="no-referrer"
               />
@@ -978,7 +978,7 @@ function SubmissionCard({ sub, theme, classroom }: SubmissionCardProps & { theme
               <div className={cn("w-1 h-1 rounded-full", theme === 'light' ? "bg-zinc-200" : "bg-zinc-800")} />
               <p className={cn("text-[10px] font-mono font-bold tracking-widest", theme === 'light' ? "text-zinc-500" : "text-zinc-400")}>{sub.problemTitle || 'Technical Task'}</p>
             </div>
-            <p className={cn("text-[9px] font-black uppercase tracking-[0.2em]", theme === 'light' ? "text-zinc-400" : "text-zinc-500")}>{new Date(sub.submittedAt).toLocaleTimeString()}</p>
+            <p className={cn("text-[9px] font-black uppercase tracking-[0.2em]", theme === 'light' ? "text-zinc-400" : "text-zinc-500")} title={new Date(sub.submittedAt).toLocaleString()}>{formatRelativeTime(sub.submittedAt)}</p>
           </div>
         </div>
         <div className="flex items-center gap-6">
