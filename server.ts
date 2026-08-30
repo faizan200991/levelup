@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import tutorHandler from "./api/tutor";
 import hintHandler from "./api/hint";
 import simulateHandler from "./api/simulate";
+import reflectHandler from "./api/reflect";
 
 async function startServer() {
   const app = express();
@@ -39,6 +40,16 @@ async function startServer() {
     } catch (err: unknown) {
       const error = err as Error;
       console.error("Express /api/simulate error:", error);
+      res.status(500).json({ error: "api_error", message: error?.message || "Internal server error" });
+    }
+  });
+
+  app.post("/api/reflect", async (req, res) => {
+    try {
+      await reflectHandler(req, res);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Express /api/reflect error:", error);
       res.status(500).json({ error: "api_error", message: error?.message || "Internal server error" });
     }
   });

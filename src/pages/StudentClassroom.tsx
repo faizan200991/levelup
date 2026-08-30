@@ -24,7 +24,8 @@ import {
   Trophy,
   Flame,
   Star,
-  Award
+  Award,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -103,6 +104,14 @@ export default function StudentClassroom({
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const hintDecorationRef = useRef<any>(null);
+  const prevSubmissionStatusRef = useRef<Record<string, string>>({});
+  const hasLoadedSubsOnceRef = useRef(false);
+  const [reflectPrompt, setReflectPrompt] = useState<null | { submissionId: string; problemTitle: string; code: string; language?: string; question: string }>(null);
+  const [reflectAnswer, setReflectAnswer] = useState('');
+  const [reflectResult, setReflectResult] = useState<null | { understood: boolean; feedback: string }>(null);
+  const [isReflectLoading, setIsReflectLoading] = useState(false);
+  const [sharePrompt, setSharePrompt] = useState<null | { draft: string }>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
   const getDefaultCode = (lang: string) => {
     switch (lang) {
@@ -259,7 +268,7 @@ export default function StudentClassroom({
         .order('submitted_at', { ascending: false });
       
       if (data) {
-        setSubmissions(data.map(d => ({
+        const mapped = data.map(d => ({
           id: d.id,
           studentId: d.student_id,
           problemId: d.problem_id,
@@ -270,7 +279,28 @@ export default function StudentClassroom({
           status: d.status,
           feedback: d.feedback,
           submittedAt: d.submitted_at
-        } as Submission)));
+        } as Submission));
+
+        setSubmissions(mapped);
+
+        // Only celebrate a submission the FIRST time we witness it become
+        // 'correct' live (via the realtime subscription below) — not on
+        // initial page load, and not repeatedly on every re-fetch.
+        const newlyCorrect = mapped.find(
+          (s) => s.status === 'correct' && prevSubmissionStatusRef.current[s.id] !== 'correct'
+        );
+        mapped.forEach((s) => { prevSubmissionStatusRef.current[s.id] = s.status; });
+
+        if (hasLoadedSubsOnceRef.current && newlyCorrect) {
+          confetti({
+            particleCount: 120,
+            spread: 90,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#10b981', '#f59e0b']
+          });
+          triggerReflectCheck(newlyCorrect);
+        }
+        hasLoadedSubsOnceRef.current = true;
       }
     };
 
@@ -378,6 +408,93 @@ export default function StudentClassroom({
       setOutput(prev => `[AI Error] Could not get a hint. ${prev}`);
     } finally {
       setIsGettingHint(false);
+    }
+  };
+
+  // When a submission is confirmed correct, ask the AI to generate one
+  // short comprehension question specific to THIS student's code — a quick,
+  // low-stakes check that they understand what they wrote, not just that it
+  // happened to work. This is intentionally generous, not a hard gate.
+  const triggerReflectCheck = async (submission: Submission) => {
+    try {
+      const response = await fetch('/api/reflect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemTitle: submission.problemTitle || 'this problem',
+          code: submission.code,
+          language: submission.language,
+        }),
+      });
+      if (!response.ok) return; // Fail silently — this is a bonus feature, never block the celebration
+      const data = await response.json();
+      if (data.question) {
+        setReflectAnswer('');
+        setReflectResult(null);
+        setReflectPrompt({
+          submissionId: submission.id,
+          problemTitle: submission.problemTitle || 'this problem',
+          code: submission.code,
+          language: submission.language,
+          question: data.question,
+        });
+      }
+    } catch (err) {
+      console.error('Reflect check generation failed (non-blocking):', err);
+    }
+  };
+
+  const submitReflectAnswer = async () => {
+    if (!reflectPrompt || !reflectAnswer.trim()) return;
+    setIsReflectLoading(true);
+    try {
+      const response = await fetch('/api/reflect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemTitle: reflectPrompt.problemTitle,
+          code: reflectPrompt.code,
+          language: reflectPrompt.language,
+          answer: reflectAnswer,
+        }),
+      });
+      const data = await response.json();
+      setReflectResult({
+        understood: data.understood !== false,
+        feedback: data.feedback || "Thanks for sharing your thinking!",
+      });
+    } catch (err) {
+      console.error('Reflect answer check failed:', err);
+      setReflectResult({ understood: true, feedback: "Thanks for sharing your thinking!" });
+    } finally {
+      setIsReflectLoading(false);
+    }
+  };
+
+  const openSharePrompt = () => {
+    const title = reflectPrompt?.problemTitle || 'a problem';
+    setReflectPrompt(null);
+    setSharePrompt({ draft: `Just solved "${title}" in ${classroom.className}! 🎉` });
+  };
+
+  const postShareToPeerHub = async () => {
+    if (!user || !sharePrompt?.draft.trim()) return;
+    setIsSharing(true);
+    try {
+      const { data: profile } = await supabase.from('profiles').select('name, photo_url').eq('id', user.id).single();
+      await supabase.from('posts').insert({
+        author_id: user.id,
+        author_name: profile?.name || user.email?.split('@')[0] || 'Anonymous',
+        author_avatar: profile?.photo_url || user.id,
+        content: sharePrompt.draft.trim(),
+        likes_count: 0,
+      });
+      setSharePrompt(null);
+    } catch (err) {
+      console.error('Share to Peer Hub failed:', err);
+      setSharePrompt(null);
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -1191,6 +1308,159 @@ export default function StudentClassroom({
           </div>
         </div>
       </div>
+
+      {/* Quick Check: appears after a submission is confirmed correct, asking
+          one short question about THIS student's specific code — reinforces
+          that understanding matters, not just a passing status. */}
+      <AnimatePresence>
+        {reflectPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className={cn(
+                "w-full max-w-md rounded-3xl p-6 shadow-2xl border",
+                theme === 'light' ? "bg-white border-zinc-200" : "bg-zinc-950 border-zinc-800"
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
+                <p className={cn("text-[10px] font-black uppercase tracking-widest", theme === 'light' ? "text-emerald-600" : "text-emerald-400")}>
+                  Correct! Quick check
+                </p>
+              </div>
+              <p className={cn("text-xs mb-4", theme === 'light' ? "text-zinc-500" : "text-zinc-400")}>
+                One quick question about your own solution — no pressure, just curious.
+              </p>
+
+              {!reflectResult ? (
+                <>
+                  <p className={cn("font-bold text-sm mb-4 leading-relaxed", theme === 'light' ? "text-zinc-950" : "text-white")}>
+                    {reflectPrompt.question}
+                  </p>
+                  <textarea
+                    value={reflectAnswer}
+                    onChange={(e) => setReflectAnswer(e.target.value)}
+                    placeholder="Explain in a sentence or two..."
+                    rows={3}
+                    className={cn(
+                      "w-full rounded-2xl p-3 text-sm resize-none border outline-none transition-colors mb-4",
+                      theme === 'light'
+                        ? "bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-blue-400"
+                        : "bg-zinc-900 border-zinc-800 text-white focus:border-blue-500"
+                    )}
+                  />
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={openSharePrompt}
+                      className={cn("text-[10px] font-black uppercase tracking-widest px-4 py-2.5", theme === 'light' ? "text-zinc-400 hover:text-zinc-600" : "text-zinc-600 hover:text-zinc-400")}
+                    >
+                      Skip
+                    </button>
+                    <Button
+                      onClick={submitReflectAnswer}
+                      isLoading={isReflectLoading}
+                      disabled={!reflectAnswer.trim()}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl"
+                    >
+                      Submit Answer
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-2">
+                  <div className={cn(
+                    "w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center",
+                    reflectResult.understood ? "bg-emerald-500/10" : "bg-amber-500/10"
+                  )}>
+                    {reflectResult.understood
+                      ? <CheckCircle className="w-7 h-7 text-emerald-500" />
+                      : <Sparkles className="w-7 h-7 text-amber-500" />}
+                  </div>
+                  <p className={cn("text-sm font-bold mb-6", theme === 'light' ? "text-zinc-950" : "text-white")}>
+                    {reflectResult.feedback}
+                  </p>
+                  <Button
+                    onClick={openSharePrompt}
+                    className="w-full bg-zinc-950 hover:bg-zinc-800 text-white rounded-2xl"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Share to Peer Hub — offered right after the Quick Check flow, so
+          Classroom and Peer Hub feel like one connected product, not two
+          bolted-together features. */}
+      <AnimatePresence>
+        {sharePrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className={cn(
+                "w-full max-w-md rounded-3xl p-6 shadow-2xl border",
+                theme === 'light' ? "bg-white border-zinc-200" : "bg-zinc-950 border-zinc-800"
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="w-5 h-5 text-blue-500" />
+                <p className={cn("text-[10px] font-black uppercase tracking-widest", theme === 'light' ? "text-blue-600" : "text-blue-400")}>
+                  Share this win?
+                </p>
+              </div>
+              <p className={cn("text-xs mb-4", theme === 'light' ? "text-zinc-500" : "text-zinc-400")}>
+                Let your classmates in Peer Hub know — totally optional.
+              </p>
+              <textarea
+                value={sharePrompt.draft}
+                onChange={(e) => setSharePrompt({ draft: e.target.value })}
+                rows={3}
+                className={cn(
+                  "w-full rounded-2xl p-3 text-sm resize-none border outline-none transition-colors mb-4",
+                  theme === 'light'
+                    ? "bg-zinc-50 border-zinc-200 text-zinc-950 focus:border-blue-400"
+                    : "bg-zinc-900 border-zinc-800 text-white focus:border-blue-500"
+                )}
+              />
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSharePrompt(null)}
+                  className={cn("text-[10px] font-black uppercase tracking-widest px-4 py-2.5", theme === 'light' ? "text-zinc-400 hover:text-zinc-600" : "text-zinc-600 hover:text-zinc-400")}
+                >
+                  Not Now
+                </button>
+                <Button
+                  onClick={postShareToPeerHub}
+                  isLoading={isSharing}
+                  disabled={!sharePrompt.draft.trim()}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl"
+                >
+                  Post to Peer Hub
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,6 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+html {
+  /* The design's spacing/type scale (via Tailwind's rem-based utilities)
+     was sized generously for large monitors. Reducing the root font-size
+     scales padding, gaps, and text uniformly across the whole app, so it
+     fits correctly at 100% browser zoom instead of requiring a manual
+     zoom-out to ~85% to see full pages without scrolling. */
+  font-size: 85%;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", sans-serif;
