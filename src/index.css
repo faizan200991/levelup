@@ -79,3 +79,29 @@ html {
   margin-left: 6px;
   border-radius: 3px;
 }
+
+/* Custom scrollbar — the default browser scrollbar is light/gray and
+   looks out of place against dark-themed panels (classroom workspace).
+   A neutral, semi-transparent thumb reads intentionally on both light
+   and dark backgrounds, instead of standing out starkly on dark ones. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 130, 0.5) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 120, 130, 0.5);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(120, 120, 130, 0.75);
+  background-clip: content-box;
+}

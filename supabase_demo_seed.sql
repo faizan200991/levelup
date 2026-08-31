@@ -57,8 +57,8 @@ BEGIN
     v_classroom_id, 'FizzBuzz Basics',
     'Write a function that prints numbers 1 to 20. For multiples of 3, print "Fizz"; for multiples of 5, print "Buzz"; for multiples of both, print "FizzBuzz".',
     'exercise', 'python',
-    'def fizzbuzz(n):\n    for i in range(1, n + 1):\n        # your code here\n        pass\n\nfizzbuzz(20)',
-    '20', '1\n2\nFizz\n4\nBuzz\n...'
+    E'def fizzbuzz(n):\n    for i in range(1, n + 1):\n        # your code here\n        pass\n\nfizzbuzz(20)',
+    '20', E'1\n2\nFizz\n4\nBuzz\n...'
   ) RETURNING id INTO v_problem1_id;
 
   INSERT INTO problems (classroom_id, title, description, type, language, starter_code, sample_input, expected_output)
@@ -66,7 +66,7 @@ BEGIN
     v_classroom_id, 'List Comprehensions',
     'Given a list of numbers, return a new list containing only the even numbers, doubled.',
     'assignment', 'python',
-    'def double_evens(nums):\n    # your code here\n    pass\n\nprint(double_evens([1,2,3,4,5,6]))',
+    E'def double_evens(nums):\n    # your code here\n    pass\n\nprint(double_evens([1,2,3,4,5,6]))',
     '[1,2,3,4,5,6]', '[4, 8, 12]'
   ) RETURNING id INTO v_problem2_id;
 
@@ -75,30 +75,30 @@ BEGIN
     v_classroom_id, 'Recursive Factorial',
     'Implement factorial(n) recursively, without using loops.',
     'assignment', 'python',
-    'def factorial(n):\n    # your code here\n    pass\n\nprint(factorial(5))',
+    E'def factorial(n):\n    # your code here\n    pass\n\nprint(factorial(5))',
     '5', '120'
   ) RETURNING id INTO v_problem3_id;
 
   -- 4. Submissions in different states, so the teacher grading UI has real variety
   INSERT INTO submissions (student_id, problem_id, code, output, status, feedback) VALUES
     (v_alex_id, v_problem1_id,
-     'def fizzbuzz(n):\n    for i in range(1, n+1):\n        if i % 15 == 0: print("FizzBuzz")\n        elif i % 3 == 0: print("Fizz")\n        elif i % 5 == 0: print("Buzz")\n        else: print(i)',
-     '1\n2\nFizz\n4\nBuzz', 'correct', 'Clean solution, good use of modulo order.'),
+     E'def fizzbuzz(n):\n    for i in range(1, n+1):\n        if i % 15 == 0: print("FizzBuzz")\n        elif i % 3 == 0: print("Fizz")\n        elif i % 5 == 0: print("Buzz")\n        else: print(i)',
+     E'1\n2\nFizz\n4\nBuzz', 'correct', 'Clean solution, good use of modulo order.'),
     (v_priya_id, v_problem1_id,
-     'def fizzbuzz(n):\n    for i in range(1, n+1):\n        if i % 3 == 0: print("Fizz")\n        elif i % 5 == 0: print("Buzz")\n        elif i % 15 == 0: print("FizzBuzz")\n        else: print(i)',
-     '1\n2\nFizz\n4\nBuzz', 'incorrect', 'Check your condition order — FizzBuzz case never gets reached since Fizz/Buzz catch it first.'),
+     E'def fizzbuzz(n):\n    for i in range(1, n+1):\n        if i % 3 == 0: print("Fizz")\n        elif i % 5 == 0: print("Buzz")\n        elif i % 15 == 0: print("FizzBuzz")\n        else: print(i)',
+     E'1\n2\nFizz\n4\nBuzz', 'incorrect', 'Check your condition order — FizzBuzz case never gets reached since Fizz/Buzz catch it first.'),
     (v_jordan_id, v_problem2_id,
-     'def double_evens(nums):\n    return [n*2 for n in nums if n % 2 == 0]',
+     E'def double_evens(nums):\n    return [n*2 for n in nums if n % 2 == 0]',
      '[4, 8, 12]', 'pending', NULL),
     (v_alex_id, v_problem2_id,
-     'def double_evens(nums):\n    return [n*2 for n in nums if n % 2 == 0]',
+     E'def double_evens(nums):\n    return [n*2 for n in nums if n % 2 == 0]',
      '[4, 8, 12]', 'correct', 'Nice, textbook list comprehension.');
 
   -- 5. An active live coding session (so the teacher's live roster shows real activity)
   INSERT INTO live_sessions (classroom_id, student_id, problem_id, code, language)
   VALUES (
     v_classroom_id, v_jordan_id, v_problem3_id,
-    'def factorial(n):\n    if n <= 1:\n        return 1\n    # stuck here — trying to call itself\n    return n * factorial(',
+    E'def factorial(n):\n    if n <= 1:\n        return 1\n    # stuck here — trying to call itself\n    return n * factorial(',
     'python'
   )
   ON CONFLICT (classroom_id, student_id) DO UPDATE SET code = EXCLUDED.code, language = EXCLUDED.language;
