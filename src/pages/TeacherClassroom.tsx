@@ -215,7 +215,19 @@ export default function TeacherClassroom({
   }, [classroom.id]);
 
   return (
-    <DashboardLayout theme={theme}>
+    <DashboardLayout 
+      theme={theme}
+      subNav={{
+        parentPath: '/classrooms',
+        items: [
+          { icon: Monitor, label: 'Live Feed', active: activeTab === 'monitor', onClick: () => setActiveTab('monitor') },
+          { icon: LayoutGrid, label: 'Heatmap', active: activeTab === 'heatmap', onClick: () => setActiveTab('heatmap') },
+          { icon: Code, label: 'Curriculum', active: activeTab === 'problems', onClick: () => setActiveTab('problems') },
+          { icon: CheckCircle, label: 'Review', active: activeTab === 'submissions', onClick: () => setActiveTab('submissions') },
+          { icon: FileText, label: 'Materials', active: activeTab === 'resources', onClick: () => setActiveTab('resources') },
+        ],
+      }}
+    >
       <div className="max-w-[1600px] mx-auto pb-20">
         {/* Advanced Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-12 relative z-10">
@@ -270,44 +282,6 @@ export default function TeacherClassroom({
               </button>
             </div>
           </motion.div>
-          
-          <div className={cn("flex p-1.5 rounded-2xl border transition-all self-stretch lg:self-auto overflow-x-auto no-scrollbar", theme === 'light' ? "bg-zinc-100 border-zinc-200 shadow-sm" : "bg-zinc-900 border-zinc-800")}>
-            <TabButton 
-              active={activeTab === 'monitor'} 
-              onClick={() => setActiveTab('monitor')}
-              icon={<Monitor className="w-3.5 h-3.5" />}
-              label="Live Feed"
-              theme={theme}
-            />
-            <TabButton 
-              active={activeTab === 'heatmap'} 
-              onClick={() => setActiveTab('heatmap')}
-              icon={<LayoutGrid className="w-3.5 h-3.5" />}
-              label="Heatmap"
-              theme={theme}
-            />
-            <TabButton 
-              active={activeTab === 'problems'} 
-              onClick={() => setActiveTab('problems')}
-              icon={<Code className="w-3.5 h-3.5" />}
-              label="Curriculum"
-              theme={theme}
-            />
-            <TabButton 
-              active={activeTab === 'submissions'} 
-              onClick={() => setActiveTab('submissions')}
-              icon={<CheckCircle className="w-3.5 h-3.5" />}
-              label="Review"
-              theme={theme}
-            />
-            <TabButton 
-              active={activeTab === 'resources'} 
-              onClick={() => setActiveTab('resources')}
-              icon={<FileText className="w-3.5 h-3.5" />}
-              label="Materials"
-              theme={theme}
-            />
-          </div>
         </div>
 
         {/* Dynamic Content */}
@@ -886,24 +860,7 @@ function QrModal({ onClose, joinUrl, roomCode, className, theme }: { onClose: ()
   );
 }
 
-function TabButton({ active, onClick, icon, label, theme }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, theme: 'light' | 'vs-dark' }) {
-  return (
-    <button 
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl",
-        active 
-          ? (theme === 'light' ? "bg-zinc-950 text-white shadow-zinc-200" : "bg-white text-zinc-950 shadow-black") 
-          : (theme === 'light' ? "text-zinc-500 hover:text-zinc-950 hover:bg-white" : "text-zinc-400 hover:text-white hover:bg-white/5")
-      )}
-    >
-      <div className={cn("transition-transform duration-500", active && "scale-110")}>
-        {icon}
-      </div>
-      <span>{label}</span>
-    </button>
-  );
-}
+
 
 interface SubmissionCardProps {
   sub: Submission;

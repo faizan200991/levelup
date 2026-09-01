@@ -21,9 +21,13 @@ interface SidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   theme?: 'light' | 'vs-dark';
+  subNav?: {
+    parentPath: string;
+    items: { icon: React.ComponentType<{ className?: string }>; label: string; active: boolean; onClick: () => void }[];
+  };
 }
 
-export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse, subNav }: SidebarProps) {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
 
@@ -82,30 +86,55 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
 
       <nav className="flex-1 px-3 py-1 space-y-0.5 mt-1 overflow-y-auto no-scrollbar">
         {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => cn(
-              "flex items-center gap-3 px-3 py-1 rounded-xl transition-all group relative",
-              isActive 
-                ? "bg-zinc-900 text-white shadow-[0_4px_20px_rgba(0,0,0,0.4)] border border-zinc-800" 
-                : "text-zinc-500 hover:bg-zinc-900/40 hover:text-zinc-200",
-              isCollapsed && "justify-center px-0"
+          <div key={item.path}>
+            <NavLink
+              to={item.path}
+              className={({ isActive }) => cn(
+                "flex items-center gap-3 px-3 py-1 rounded-xl transition-all group relative",
+                isActive 
+                  ? "bg-zinc-900 text-white shadow-[0_4px_20px_rgba(0,0,0,0.4)] border border-zinc-800" 
+                  : "text-zinc-500 hover:bg-zinc-900/40 hover:text-zinc-200",
+                isCollapsed && "justify-center px-0"
+              )}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon className={cn("w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110", isActive && "text-white")} />
+                  {!isCollapsed && <span className="text-sm font-bold tracking-tight">{item.label}</span>}
+                  {!isCollapsed && <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />}
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-6 px-3 py-2 text-[10px] rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 whitespace-nowrap uppercase tracking-[0.2em] font-black border shadow-2xl bg-zinc-900 text-white border-zinc-800">
+                      {item.label}
+                    </div>
+                  )}
+                </>
+              )}
+            </NavLink>
+
+            {/* Page-specific sub-navigation — e.g. the active classroom's
+                Live Feed / Heatmap / Curriculum / Review / Materials tabs,
+                nested under "My Classrooms" instead of a horizontal bar
+                that overflows on narrower screens. */}
+            {subNav && subNav.parentPath === item.path && !isCollapsed && (
+              <div className="ml-4 pl-3 border-l border-zinc-900 space-y-0.5 mt-0.5 mb-1">
+                {subNav.items.map((sub) => (
+                  <button
+                    key={sub.label}
+                    onClick={sub.onClick}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-1 rounded-lg transition-all text-left",
+                      sub.active
+                        ? "bg-blue-600/15 text-blue-400"
+                        : "text-zinc-600 hover:bg-zinc-900/40 hover:text-zinc-300"
+                    )}
+                  >
+                    <sub.icon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-[11px] font-bold tracking-tight">{sub.label}</span>
+                  </button>
+                ))}
+              </div>
             )}
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon className={cn("w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110", isActive && "text-white")} />
-                {!isCollapsed && <span className="text-sm font-bold tracking-tight">{item.label}</span>}
-                {!isCollapsed && <ChevronRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />}
-                {isCollapsed && (
-                  <div className="absolute left-full ml-6 px-3 py-2 text-[10px] rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 whitespace-nowrap uppercase tracking-[0.2em] font-black border shadow-2xl bg-zinc-900 text-white border-zinc-800">
-                    {item.label}
-                  </div>
-                )}
-              </>
-            )}
-          </NavLink>
+          </div>
         ))}
       </nav>
 

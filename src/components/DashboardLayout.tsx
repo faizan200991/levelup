@@ -7,9 +7,13 @@ import NotificationPopover from './NotificationPopover';
 interface LayoutProps {
   children: React.ReactNode;
   theme?: 'light' | 'vs-dark';
+  subNav?: {
+    parentPath: string;
+    items: { icon: React.ComponentType<{ className?: string }>; label: string; active: boolean; onClick: () => void }[];
+  };
 }
 
-export default function DashboardLayout({ children, theme = 'light' }: LayoutProps) {
+export default function DashboardLayout({ children, theme = 'light', subNav }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -24,6 +28,7 @@ export default function DashboardLayout({ children, theme = 'light' }: LayoutPro
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
         theme={theme}
+        subNav={subNav}
       />
       
       {/* Mobile Header */}
