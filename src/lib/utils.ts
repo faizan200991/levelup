@@ -20,6 +20,46 @@ export function formatRelativeTime(dateInput: string | Date): string {
   return date.toLocaleDateString();
 }
 
+export function getLanguageColor(lang: string = ''): { bg: string; iconBg: string } {
+  const l = lang.toLowerCase();
+
+  // Brand-appropriate colors per language, used for the icon container
+  // background so classroom cards are colored/scannable by language at a
+  // glance, instead of relying solely on the icon SVG's own contrast
+  // (which varies — some devicon assets are logo-only with no fill).
+  const mapping: Record<string, { bg: string; iconBg: string }> = {
+    javascript: { bg: '#292929', iconBg: '#F7DF1E' },
+    typescript: { bg: '#3178C6', iconBg: '#FFFFFF' },
+    python: { bg: '#3776AB', iconBg: '#FFD43B' },
+    html: { bg: '#E34F26', iconBg: '#FFFFFF' },
+    css: { bg: '#1572B6', iconBg: '#FFFFFF' },
+    java: { bg: '#EA2D2E', iconBg: '#FFFFFF' },
+    cpp: { bg: '#00599C', iconBg: '#FFFFFF' },
+    react: { bg: '#20232A', iconBg: '#61DAFB' },
+    vue: { bg: '#42B883', iconBg: '#FFFFFF' },
+    angular: { bg: '#DD0031', iconBg: '#FFFFFF' },
+    php: { bg: '#777BB4', iconBg: '#FFFFFF' },
+    ruby: { bg: '#CC342D', iconBg: '#FFFFFF' },
+    go: { bg: '#00ADD8', iconBg: '#FFFFFF' },
+    rust: { bg: '#2F2F2F', iconBg: '#FFFFFF' },
+    swift: { bg: '#F05138', iconBg: '#FFFFFF' },
+    kotlin: { bg: '#7F52FF', iconBg: '#FFFFFF' },
+    dart: { bg: '#0175C2', iconBg: '#FFFFFF' },
+    sql: { bg: '#336791', iconBg: '#FFFFFF' },
+    bash: { bg: '#2D2D2D', iconBg: '#4EAA25' },
+    nextjs: { bg: '#000000', iconBg: '#FFFFFF' },
+    express: { bg: '#2D2D2D', iconBg: '#FFFFFF' },
+    django: { bg: '#092E20', iconBg: '#44B78B' },
+    flask: { bg: '#2D2D2D', iconBg: '#FFFFFF' },
+    csharp: { bg: '#68217A', iconBg: '#FFFFFF' },
+    lua: { bg: '#2C2D72', iconBg: '#FFFFFF' },
+    perl: { bg: '#39457E', iconBg: '#FFFFFF' },
+    r: { bg: '#276DC3', iconBg: '#FFFFFF' },
+  };
+
+  return mapping[l] || { bg: '#3B82F6', iconBg: '#FFFFFF' };
+}
+
 export function getLanguageIcon(lang: string = ''): string {
   const l = lang.toLowerCase();
   

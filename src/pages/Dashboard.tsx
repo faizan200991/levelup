@@ -8,7 +8,7 @@ import { ClassRoom, DBClassroom } from '../types';
 import Loader from '../components/Loader';
 import { Plus, BookOpen, Activity, ArrowRight, CheckCircle, FileText, Code, Sparkles, Users } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn, getLanguageIcon } from '../lib/utils';
+import { cn, getLanguageIcon, getLanguageColor } from '../lib/utils';
 
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -374,12 +374,15 @@ export default function Dashboard() {
                     className="group glass p-5 rounded-3xl transition-all duration-500 h-full flex flex-col hover:border-blue-500/50 hover:shadow-advanced hover:-translate-y-1"
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 p-2.5">
+                      <div 
+                        className="w-10 h-10 rounded-xl flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 p-2.5"
+                        style={{ backgroundColor: cls.language ? getLanguageColor(cls.language).bg : '#18181B' }}
+                      >
                         {cls.language ? (
                           <img 
                             src={getLanguageIcon(cls.language)} 
                             alt={cls.language} 
-                            className="w-full h-full object-contain brightness-0 invert"
+                            className="w-full h-full object-contain"
                             referrerPolicy="no-referrer"
                           />
                         ) : (

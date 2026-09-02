@@ -22,7 +22,9 @@ import {
   Trash2,
   Sun,
   Moon,
-  QrCode
+  QrCode,
+  Maximize2,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -49,6 +51,7 @@ export default function TeacherClassroom({
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
+  const [expandedLiveCode, setExpandedLiveCode] = useState<LiveCode | null>(null);
   const [copied, setCopied] = useState(false);
 
   const joinUrl = `${window.location.origin}/dashboard?join=${classroom.roomCode}`;
@@ -335,9 +338,21 @@ export default function TeacherClassroom({
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[9px] text-zinc-500 font-mono block uppercase tracking-widest mb-1">Last Update</span>
-                        <span className={cn("text-[11px] font-mono", theme === 'light' ? "text-zinc-700" : "text-zinc-300")}>{new Date(code.lastUpdated).toLocaleTimeString()}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <span className="text-[9px] text-zinc-500 font-mono block uppercase tracking-widest mb-1">Last Update</span>
+                          <span className={cn("text-[11px] font-mono", theme === 'light' ? "text-zinc-700" : "text-zinc-300")}>{new Date(code.lastUpdated).toLocaleTimeString()}</span>
+                        </div>
+                        <button
+                          onClick={() => setExpandedLiveCode(code)}
+                          title="View full code"
+                          className={cn(
+                            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all",
+                            theme === 'light' ? "bg-zinc-100 text-zinc-400 hover:text-zinc-950 hover:bg-zinc-200" : "bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10"
+                          )}
+                        >
+                          <Maximize2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                     <div className="flex-1 overflow-hidden group-hover:opacity-100 opacity-80 transition-opacity">
@@ -644,6 +659,78 @@ export default function TeacherClassroom({
             className={classroom.className}
             theme={theme}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Expanded live code view — a focused, cleanly-sized read of a
+          single student's live code, matching the Review tab's chrome,
+          instead of only the small always-on grid preview. */}
+      <AnimatePresence>
+        {expandedLiveCode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setExpandedLiveCode(null)}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-10"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-3xl"
+            >
+              <div className="flex items-center justify-between mb-3 px-1">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={expandedLiveCode.studentPhotoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${expandedLiveCode.id}`}
+                    alt={expandedLiveCode.studentName}
+                    className="w-8 h-8 rounded-lg object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <span className="text-sm font-bold text-white">{expandedLiveCode.studentName}</span>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">{expandedLiveCode.language}</span>
+                </div>
+                <button
+                  onClick={() => setExpandedLiveCode(null)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 text-white hover:bg-white/20 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="relative rounded-[2rem] overflow-hidden border border-zinc-800 shadow-2xl bg-zinc-950">
+                <div className="h-10 px-6 flex items-center justify-between border-b bg-zinc-900 border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest ml-2 text-zinc-500">Live Code :: READ ONLY</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Syncing</span>
+                  </div>
+                </div>
+                <div style={{ height: `${Math.min(500, Math.max(160, (expandedLiveCode.code || '').split('\n').length * 24 + 48))}px` }}>
+                  <Editor
+                    height="100%"
+                    theme="vs-dark"
+                    language={expandedLiveCode.language}
+                    value={expandedLiveCode.code}
+                    options={{
+                      fontSize: 14,
+                      readOnly: true,
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      padding: { top: 20, bottom: 20 },
+                    }}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </DashboardLayout>
@@ -975,7 +1062,7 @@ function SubmissionCard({ sub, theme, classroom }: SubmissionCardProps & { theme
                    </div>
                    <div className="bg-white/5 px-2 py-0.5 rounded text-[8px] font-black text-zinc-500 uppercase">UTF-8</div>
                 </div>
-                <div className="h-[400px]">
+                <div style={{ height: `${Math.min(400, Math.max(120, (sub.code || '').split('\n').length * 24 + 48))}px` }}>
                   <Editor 
                     height="100%"
                     theme={theme === 'light' ? 'light' : 'vs-dark'}
@@ -985,6 +1072,7 @@ function SubmissionCard({ sub, theme, classroom }: SubmissionCardProps & { theme
                        fontSize: 14,
                        readOnly: true,
                        minimap: { enabled: false },
+                       scrollBeyondLastLine: false,
                        padding: { top: 20, bottom: 20 }
                     }}
                   />

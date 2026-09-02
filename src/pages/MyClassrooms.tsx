@@ -6,7 +6,7 @@ import { ClassRoom, DBClassroom } from '../types';
 import Loader from '../components/Loader';
 import { BookOpen, Search, ArrowRight, FileText, Users } from 'lucide-react';
 import { motion } from 'motion/react';
-import { getLanguageIcon } from '../lib/utils';
+import { getLanguageIcon, getLanguageColor } from '../lib/utils';
 import DashboardLayout from '../components/DashboardLayout';
 import { Input } from '../components/Input';
 
@@ -152,7 +152,10 @@ export default function MyClassrooms() {
                 className="group bg-white p-6 rounded-2xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_40px_rgba(59,130,246,0.04)] hover:border-blue-100 transition-all duration-300 relative h-full flex flex-col"
               >
                 <div className="flex justify-between items-start mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-zinc-50 flex items-center justify-center border border-zinc-50 p-2.5 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
+                  <div 
+                    className="w-11 h-11 rounded-xl flex items-center justify-center border border-zinc-50 p-2.5 transition-colors"
+                    style={{ backgroundColor: cls.language ? getLanguageColor(cls.language).bg : '#FAFAFA' }}
+                  >
                     {cls.language ? (
                       <img 
                         src={getLanguageIcon(cls.language)} 
