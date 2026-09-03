@@ -313,7 +313,7 @@ export default function TeacherClassroom({
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.05 }}
                     className={cn(
-                      "rounded-[2.5rem] border overflow-hidden flex flex-col h-[450px] group relative transition-all",
+                      "rounded-[2.5rem] border overflow-hidden flex flex-col h-[300px] group relative transition-all",
                       theme === 'light' ? "bg-white border-zinc-200 shadow-xl" : "bg-zinc-950 border-zinc-900 shadow-2xl"
                     )}
                   >
