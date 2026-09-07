@@ -452,7 +452,7 @@ export default function Dashboard() {
             {activities.length === 0 ? (
               <div className="p-10 text-center">
                 <Activity className="w-8 h-8 text-zinc-100 mx-auto mb-4" />
-                <p className="text-zinc-300 text-[9px] font-black uppercase tracking-[0.3em]">No activity yet</p>
+                <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em]">No activity yet</p>
               </div>
             ) : (
               <div className="divide-y divide-zinc-100/50">
@@ -491,7 +491,7 @@ export default function Dashboard() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-0.5">
                              <p className="text-[8px] font-black text-blue-600 uppercase tracking-widest truncate max-w-[100px]">{act.className}</p>
-                             <span className="text-[8px] font-black text-zinc-300 uppercase tracking-widest">
+                             <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">
                                {new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                              </span>
                           </div>

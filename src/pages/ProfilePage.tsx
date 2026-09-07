@@ -332,7 +332,7 @@ export default function ProfilePage() {
           </div>
           
           <div className="px-6 md:px-10 pb-8 relative">
-            <div className="flex flex-col md:flex-row gap-6 md:gap-10 -mt-14 md:-mt-16">
+            <div className="flex flex-col md:flex-row items-start gap-6 md:gap-10 -mt-14 md:-mt-16">
               {/* Profile Photo */}
               <div className="relative group shrink-0">
                 <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl bg-zinc-50 border-8 border-white shadow-2xl overflow-hidden relative">

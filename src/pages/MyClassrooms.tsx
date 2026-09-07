@@ -177,7 +177,7 @@ export default function MyClassrooms() {
                 <h3 className="font-display font-black text-lg text-black tracking-tight mb-1 group-hover:text-blue-600 transition-colors leading-tight">
                   {cls.className}
                 </h3>
-                <p className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-5">
+                <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-5">
                   {profile?.role === 'teacher' ? 'TEACHER' : 'ENROLLED STUDENT'}
                 </p>
 
