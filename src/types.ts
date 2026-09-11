@@ -45,7 +45,10 @@ export interface Problem {
   starterCode?: string;
   sampleInput?: string;
   expectedOutput?: string;
+  dueDate?: string | null;
   createdAt: string;
+  classroomId?: string;
+  className?: string;
 }
 
 export interface Submission {

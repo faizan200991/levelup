@@ -38,8 +38,10 @@ CREATE TABLE problems (
   starter_code TEXT,
   sample_input TEXT,
   expected_output TEXT,
+  due_date TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_problems_due_date ON problems(due_date);
 
 -- 4. Create Submissions table
 CREATE TABLE submissions (

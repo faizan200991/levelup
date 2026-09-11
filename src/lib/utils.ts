@@ -20,6 +20,40 @@ export function formatRelativeTime(dateInput: string | Date): string {
   return date.toLocaleDateString();
 }
 
+/** Relative countdown string for a due date, e.g. "5h left", "20d left", "Overdue by 2h". */
+export function formatTimeRemaining(dueDate: string | Date): string {
+  const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
+  const diffMs = due.getTime() - Date.now();
+  const overdue = diffMs < 0;
+  const abs = Math.abs(diffMs);
+
+  const minutes = Math.floor(abs / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  let text: string;
+  if (minutes < 1) text = overdue ? 'just now' : 'due now';
+  else if (minutes < 60) text = `${minutes}m`;
+  else if (hours < 24) text = `${hours}h`;
+  else if (days < 30) text = `${days}d`;
+  else text = due.toLocaleDateString();
+
+  if (minutes < 1 && !overdue) return text;
+  return overdue ? `Overdue by ${text}` : `${text} left`;
+}
+
+/** Urgency bucket for a due date, used to color-code countdown badges. */
+export function getDueUrgency(dueDate: string | Date | null | undefined): 'overdue' | 'urgent' | 'soon' | 'normal' | 'none' {
+  if (!dueDate) return 'none';
+  const due = typeof dueDate === 'string' ? new Date(dueDate) : dueDate;
+  const diffMs = due.getTime() - Date.now();
+  if (diffMs < 0) return 'overdue';
+  const hours = diffMs / 3600000;
+  if (hours < 24) return 'urgent';
+  if (hours < 72) return 'soon';
+  return 'normal';
+}
+
 export function getLanguageColor(lang: string = ''): { bg: string; iconBg: string } {
   const l = lang.toLowerCase();
 

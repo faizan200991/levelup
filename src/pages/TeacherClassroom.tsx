@@ -4,6 +4,7 @@ import { ClassRoom, Problem, LiveCode, Submission, Resource } from '../types';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Badge } from '../components/Badge';
+import CountdownBadge from '../components/CountdownBadge';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -108,6 +109,7 @@ export default function TeacherClassroom({
         starterCode: row.starter_code,
         sampleInput: row.sample_input,
         expectedOutput: row.expected_output,
+        dueDate: row.due_date,
         createdAt: row.created_at,
       })) as Problem[]);
     };
@@ -460,6 +462,7 @@ export default function TeacherClassroom({
                           )}>
                             {prob.type || 'exercise'}
                           </div>
+                          <CountdownBadge dueDate={prob.dueDate} theme={theme} />
                         </div>
                         <p className={cn("font-bold max-w-2xl leading-relaxed", theme === 'light' ? "text-zinc-950" : "text-zinc-400")}>{prob.description.substring(0, 120)}...</p>
                         <div className="flex flex-wrap gap-4 mt-6 items-center">
@@ -1260,6 +1263,8 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
   const [lang, setLang] = useState(problem?.language || 'python');
   const [type, setType] = useState<'exercise' | 'assignment'>(problem?.type || 'exercise');
   const [starterCode, setStarterCode] = useState(problem?.starterCode || '');
+  // datetime-local inputs need "YYYY-MM-DDTHH:mm" with no timezone suffix
+  const [dueDate, setDueDate] = useState(problem?.dueDate ? new Date(problem.dueDate).toISOString().slice(0, 16) : '');
   const [loading, setLoading] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
 
@@ -1299,7 +1304,8 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
         language: lang,
         type,
         instructions_url: instructionsUrl,
-        starter_code: starterCode
+        starter_code: starterCode,
+        due_date: dueDate ? new Date(dueDate).toISOString() : null
       };
 
       if (problem) {
@@ -1442,6 +1448,28 @@ function ProblemModal({ onClose, classroomId, problem, theme }: { onClose: () =>
                       </optgroup>
                     </select>
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className={cn("text-[11px] font-black uppercase tracking-[0.3em] ml-1", theme === 'light' ? "text-zinc-600" : "text-zinc-500")}>Due Date <span className="normal-case font-medium opacity-60">(optional)</span></label>
+                  <input
+                    type="datetime-local"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className={cn(
+                      "w-full h-14 rounded-2xl border px-6 text-sm font-bold focus:ring-2 focus:outline-hidden transition-all",
+                      theme === 'light' ? "border-zinc-200 bg-zinc-50/20 focus:bg-white focus:ring-zinc-950 text-zinc-950" : "border-zinc-800 bg-white/5 focus:bg-white/10 focus:ring-white/20 text-white [color-scheme:dark]"
+                    )}
+                  />
+                  {dueDate && (
+                    <button
+                      type="button"
+                      onClick={() => setDueDate('')}
+                      className={cn("text-[10px] font-black uppercase tracking-widest ml-1", theme === 'light' ? "text-zinc-400 hover:text-red-500" : "text-zinc-600 hover:text-red-400")}
+                    >
+                      Clear due date
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-3">

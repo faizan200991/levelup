@@ -12,6 +12,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import MyClassrooms from './pages/MyClassrooms';
+import Assignments from './pages/Assignments';
 import Classroom from './pages/Classroom';
 import CreateClassroom from './pages/CreateClassroom';
 import ProfilePage from './pages/ProfilePage';
@@ -65,6 +66,10 @@ function AnimatedRoutes() {
           <Route 
             path="/classrooms" 
             element={user ? <MyClassrooms /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/assignments" 
+            element={user ? <Assignments /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/classroom/create" 

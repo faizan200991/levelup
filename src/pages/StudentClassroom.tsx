@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { ClassRoom, Problem, Submission, Resource, UserProfile } from '../types';
 import { Button } from '../components/Button';
-import { cn, getLanguageIcon, formatRelativeTime } from '../lib/utils';
+import { cn, getLanguageIcon, formatRelativeTime, formatTimeRemaining, getDueUrgency } from '../lib/utils';
+import CountdownBadge from '../components/CountdownBadge';
 import { 
   Play, 
   ChevronRight, 
@@ -205,6 +206,7 @@ export default function StudentClassroom({
           starterCode: row.starter_code,
           sampleInput: row.sample_input,
           expectedOutput: row.expected_output,
+          dueDate: row.due_date,
           createdAt: row.created_at,
         })) as Problem[];
         setProblems(probs);
@@ -880,6 +882,16 @@ export default function StudentClassroom({
                               "text-[9px] font-black uppercase tracking-[0.1em] opacity-40 mt-0.5",
                               selectedProblem?.id === p.id ? (theme === 'light' ? "text-zinc-200" : "text-zinc-900") : (theme === 'light' ? "text-zinc-600" : "text-zinc-500")
                             )}>{p.type || 'EXERCISE'} • {p.language}</p>
+                            {p.dueDate && (
+                              <p className={cn(
+                                "text-[9px] font-black uppercase tracking-[0.1em] mt-1",
+                                getDueUrgency(p.dueDate) === 'overdue' || getDueUrgency(p.dueDate) === 'urgent'
+                                  ? "text-red-500"
+                                  : getDueUrgency(p.dueDate) === 'soon'
+                                    ? "text-amber-500"
+                                    : (selectedProblem?.id === p.id ? (theme === 'light' ? "text-zinc-300" : "text-zinc-700") : (theme === 'light' ? "text-zinc-400" : "text-zinc-600"))
+                              )}>{formatTimeRemaining(p.dueDate)}</p>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -889,8 +901,9 @@ export default function StudentClassroom({
                   {selectedProblem && (
                       <div className="pt-6 border-t border-zinc-100 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-3 flex-wrap">
                             <h2 className={cn("text-xl font-display font-bold tracking-tight leading-tight", theme === 'light' ? "text-black" : "text-white")}>{selectedProblem.title}</h2>
+                          <div className="flex items-center gap-3">
                           <div className={cn(
                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-2xl",
                             selectedProblem.type === 'assignment' 
@@ -898,6 +911,8 @@ export default function StudentClassroom({
                               : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                           )}>
                             {selectedProblem.type || 'exercise'}
+                          </div>
+                          <CountdownBadge dueDate={selectedProblem.dueDate} theme={theme} />
                           </div>
                         </div>
 

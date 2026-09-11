@@ -9,7 +9,8 @@ import {
   ChevronRight,
   MessageSquare,
   User,
-  Users
+  Users,
+  CalendarDays
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -39,6 +40,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: BookOpen, label: 'My Classrooms', path: '/classrooms' },
+    { icon: CalendarDays, label: 'Assignments', path: '/assignments' },
     { icon: Users, label: 'Peer Hub', path: '/peer-hub' },
     { icon: MessageSquare, label: 'AI Tutor', path: '/ai-tutor' },
     { icon: User, label: 'My Profile', path: `/profile/${user?.id}` },
