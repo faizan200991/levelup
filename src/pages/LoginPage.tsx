@@ -46,38 +46,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-4 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-[60vw] h-[60vw] bg-blue-100 rounded-full blur-[120px] -mr-[30vw] -mt-[30vw] opacity-40 mix-blend-multiply" />
-      <div className="absolute bottom-0 left-0 w-[50vw] h-[50vw] bg-zinc-200 rounded-full blur-[100px] -ml-[25vw] -mb-[25vw] opacity-40 mix-blend-multiply" />
-
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white relative overflow-hidden">
       <motion.div 
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl glass shadow-advanced rounded-3xl border-white overflow-hidden flex flex-col md:flex-row relative z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="w-full md:w-2/5 lg:w-1/3 md:min-h-screen bg-zinc-950 text-white flex flex-col justify-between relative overflow-hidden group"
       >
-        <div className="md:w-5/12 bg-zinc-950 text-white flex flex-col justify-between relative overflow-hidden group">
-          {/* Background Image Overlay */}
-          <div className="absolute inset-0 z-0 opacity-40">
-            <img 
-              src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=800" 
-              alt="Coding Background" 
-              className="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-[10000ms]"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-zinc-950/90 to-zinc-950" />
-          </div>
+        {/* Background Image Overlay */}
+        <div className="absolute inset-0 z-0 opacity-40">
+          <img 
+            src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=1200" 
+            alt="Coding Background" 
+            className="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-[10000ms]"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-zinc-950/90 to-zinc-950" />
+        </div>
 
-          <div className="p-8 pb-4 relative z-10">
-            <Link to="/" className="bg-white p-1.5 rounded-xl w-fit shadow-2xl mb-8 rotate-[-5deg] block hover:rotate-0 transition-transform duration-300">
-              <Code2 className="w-6 h-6 text-blue-600" />
-            </Link>
-            <Link to="/" className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white/80 transition-colors mb-4">
-              <ArrowLeft className="w-3 h-3" /> Back to Home
-            </Link>
-            <h1 className="font-display text-3xl lg:text-4xl font-black tracking-tighter leading-none text-white">
-              LEARN.<br />
-              <span className="text-blue-500">GROW.</span>
-            </h1>
+        <div className="p-8 lg:p-12 pb-4 relative z-10">
+          <Link to="/" className="bg-white p-1.5 rounded-xl w-fit shadow-2xl mb-8 rotate-[-5deg] block hover:rotate-0 transition-transform duration-300">
+            <Code2 className="w-6 h-6 text-blue-600" />
+          </Link>
+          <Link to="/" className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white/80 transition-colors mb-4">
+            <ArrowLeft className="w-3 h-3" /> Back to Home
+          </Link>
+          <h1 className="font-display text-4xl lg:text-6xl font-black tracking-tighter leading-none text-white">
+            LEARN.<br />
+            <span className="text-blue-500">GROW.</span>
+          </h1>
             <p className="mt-4 text-sm text-zinc-400 font-medium tracking-tight leading-relaxed max-w-[220px]">
               Access your classroom, code together, and grow with your peers.
             </p>
@@ -90,9 +86,10 @@ export default function LoginPage() {
              </div>
              <p className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.15em]">© 2026 LEVELUP EDUCATION</p>
           </div>
-        </div>
+      </motion.div>
 
-        <div className="md:w-7/12 p-8 lg:p-10 bg-white/85 backdrop-blur-xl">
+      <div className="w-full md:w-3/5 lg:w-2/3 min-h-screen bg-white flex items-center justify-center p-8 lg:p-12">
+        <div className="w-full max-w-md">
           <div className="mb-6">
             <h2 className="font-display font-black text-2xl tracking-tighter text-zinc-900 mb-1 underline decoration-blue-500/30 decoration-8 underline-offset-[-2px]">WELCOME BACK</h2>
             <p className="text-zinc-400 text-[10px] uppercase font-black tracking-[0.25em]">Sign in to start learning</p>
@@ -171,7 +168,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
