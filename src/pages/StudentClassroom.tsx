@@ -379,6 +379,19 @@ export default function StudentClassroom({
 
       const data = await response.json();
       const hint = data.text || "I'm sorry, I couldn't think of a hint right now. Try reviewing the problem requirements!";
+
+      // Fire-and-forget: log this hint request so the teacher's analytics
+      // view can surface "most-requested-hint assignment". Never blocks
+      // the UI and failures here shouldn't interrupt the student's flow.
+      if (user && selectedProblem.id) {
+        supabase.from('hint_requests').insert({
+          problem_id: selectedProblem.id,
+          student_id: user.id,
+          classroom_id: classroom.id,
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log hint request:', error);
+        });
+      }
       
       // Add hint to the console output area
       setOutput(prev => `[AI TUTOR HINT]\n${hint}\n\n${prev}`);

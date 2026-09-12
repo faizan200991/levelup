@@ -67,6 +67,18 @@ CREATE TABLE live_sessions (
   UNIQUE(classroom_id, student_id)
 );
 
+-- 5b. Hint Requests table (assignment analytics: which problems generate
+-- the most AI-tutor hint requests)
+CREATE TABLE hint_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  problem_id UUID REFERENCES problems(id) ON DELETE CASCADE NOT NULL,
+  student_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  classroom_id UUID REFERENCES classrooms(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_hint_requests_problem ON hint_requests(problem_id);
+CREATE INDEX IF NOT EXISTS idx_hint_requests_classroom ON hint_requests(classroom_id);
+
 -- 6. Resources table
 CREATE TABLE resources (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -95,6 +107,16 @@ ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE live_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hint_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Students can log own hint requests." ON hint_requests
+  FOR INSERT WITH CHECK (auth.uid() = student_id);
+CREATE POLICY "Students can view own hint requests." ON hint_requests
+  FOR SELECT USING (auth.uid() = student_id);
+CREATE POLICY "Teachers can view hint requests in their classrooms." ON hint_requests
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM classrooms c WHERE c.id = classroom_id AND c.teacher_id = auth.uid())
+  );
 
 -- ... rest of policies ...
 
@@ -284,7 +306,7 @@ CREATE TABLE notifications (
   actor_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   actor_name TEXT NOT NULL,
   actor_avatar TEXT,
-  type TEXT CHECK (type IN ('like', 'comment', 'follow', 'submission', 'feedback')),
+  type TEXT CHECK (type IN ('like', 'comment', 'follow', 'submission', 'feedback', 'due_soon')),
   content TEXT,
   resource_id UUID,
   read BOOLEAN DEFAULT FALSE,
@@ -388,6 +410,70 @@ $$;
 CREATE TRIGGER trg_notify_on_follow
 AFTER INSERT ON follows
 FOR EACH ROW EXECUTE FUNCTION notify_on_follow();
+
+-- Due-soon digest: a student's client calls this once per session (e.g. on
+-- dashboard load) to generate notifications for assignments due within 24h.
+-- Idempotent — never creates a duplicate for the same problem.
+CREATE OR REPLACE FUNCTION check_due_soon_notifications(p_student_id UUID)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_actor_name TEXT;
+BEGIN
+  IF auth.uid() IS DISTINCT FROM p_student_id THEN
+    RETURN;
+  END IF;
+
+  SELECT name INTO v_actor_name FROM profiles WHERE id = p_student_id;
+
+  INSERT INTO notifications (user_id, actor_id, actor_name, type, content, resource_id)
+  SELECT
+    p_student_id, p_student_id, COALESCE(v_actor_name, 'You'), 'due_soon', p.title, p.id
+  FROM problems p
+  JOIN enrollments e ON e.classroom_id = p.classroom_id
+  WHERE e.student_id = p_student_id
+    AND p.due_date IS NOT NULL
+    AND p.due_date > NOW()
+    AND p.due_date <= NOW() + INTERVAL '24 hours'
+    AND NOT EXISTS (
+      SELECT 1 FROM notifications n
+      WHERE n.user_id = p_student_id AND n.type = 'due_soon' AND n.resource_id = p.id
+    );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION check_due_soon_notifications(UUID) TO authenticated;
+
+-- Called by a student's client (e.g. on dashboard load) to generate "due
+-- soon" notifications for assignments due within 24h. Idempotent: never
+-- creates a duplicate for the same problem.
+CREATE OR REPLACE FUNCTION check_due_soon_notifications(p_student_id UUID)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_actor_name TEXT;
+BEGIN
+  IF auth.uid() IS DISTINCT FROM p_student_id THEN
+    RETURN;
+  END IF;
+
+  SELECT name INTO v_actor_name FROM profiles WHERE id = p_student_id;
+
+  INSERT INTO notifications (user_id, actor_id, actor_name, type, content, resource_id)
+  SELECT
+    p_student_id, p_student_id, COALESCE(v_actor_name, 'You'), 'due_soon', p.title, p.id
+  FROM problems p
+  JOIN enrollments e ON e.classroom_id = p.classroom_id
+  WHERE e.student_id = p_student_id
+    AND p.due_date IS NOT NULL
+    AND p.due_date > NOW()
+    AND p.due_date <= NOW() + INTERVAL '24 hours'
+    AND NOT EXISTS (
+      SELECT 1 FROM notifications n
+      WHERE n.user_id = p_student_id AND n.type = 'due_soon' AND n.resource_id = p.id
+    );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION check_due_soon_notifications(UUID) TO authenticated;
 
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 -- ==========================================

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Heart, MessageSquare, UserPlus, Check, Trash2, Calendar, FileCode, ClipboardCheck } from 'lucide-react';
+import { Bell, Heart, MessageSquare, UserPlus, Check, Trash2, Calendar, FileCode, ClipboardCheck, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -14,7 +14,7 @@ interface Notification {
   actor_id: string;
   actor_name: string;
   actor_avatar: string;
-  type: 'like' | 'comment' | 'follow' | 'submission' | 'feedback';
+  type: 'like' | 'comment' | 'follow' | 'submission' | 'feedback' | 'due_soon';
   content?: string;
   resource_id?: string;
   read: boolean;
@@ -91,6 +91,7 @@ export default function NotificationsPage() {
       case 'follow': return <UserPlus className="w-4 h-4 text-emerald-500" />;
       case 'submission': return <FileCode className="w-4 h-4 text-amber-500" />;
       case 'feedback': return <ClipboardCheck className="w-4 h-4 text-violet-500" />;
+      case 'due_soon': return <Clock className="w-4 h-4 text-red-500" />;
       default: return <Bell className="w-4 h-4 text-zinc-400" />;
     }
   };
@@ -184,6 +185,7 @@ export default function NotificationsPage() {
                     {n.type === 'follow' && 'Joined your learning network. You can now track each other\'s progress.'}
                     {n.type === 'submission' && `Submitted an assignment: ${n.content}`}
                     {n.type === 'feedback' && `Reviewed your work: ${n.content}`}
+                    {n.type === 'due_soon' && <>Due within 24 hours: <span className="font-bold text-zinc-800">{n.content}</span></>}
                   </p>
                 </div>
 

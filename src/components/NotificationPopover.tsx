@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Heart, MessageSquare, UserPlus, Check, Trash2, FileText, Star } from 'lucide-react';
+import { Bell, Heart, MessageSquare, UserPlus, Check, Trash2, FileText, Star, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -12,7 +12,7 @@ interface Notification {
   actor_id: string;
   actor_name: string;
   actor_avatar: string;
-  type: 'like' | 'comment' | 'follow' | 'submission' | 'feedback';
+  type: 'like' | 'comment' | 'follow' | 'submission' | 'feedback' | 'due_soon';
   content?: string;
   resource_id?: string;
   read: boolean;
@@ -136,6 +136,7 @@ export default function NotificationPopover() {
       case 'follow': return <UserPlus className="w-3 h-3 text-emerald-500" />;
       case 'submission': return <FileText className="w-3 h-3 text-purple-500 fill-purple-500" />;
       case 'feedback': return <Star className="w-3 h-3 text-orange-500 fill-orange-500" />;
+      case 'due_soon': return <Clock className="w-3 h-3 text-red-500" />;
       default: return null;
     }
   };
@@ -221,13 +222,16 @@ export default function NotificationPopover() {
 
                         <div className="flex-1 min-w-0">
                           <p className="text-xs leading-relaxed text-zinc-600">
-                            <span className="font-bold text-black uppercase tracking-tight">{n.actor_name}</span>
-                            {' '}
+                            {n.type !== 'due_soon' && (
+                              <span className="font-bold text-black uppercase tracking-tight">{n.actor_name}</span>
+                            )}
+                            {n.type !== 'due_soon' && ' '}
                             {n.type === 'like' && 'liked your momentum'}
                             {n.type === 'comment' && `commented: "${n.content}"`}
                             {n.type === 'follow' && 'started following you'}
                             {n.type === 'submission' && `submitted: ${n.content}`}
                             {n.type === 'feedback' && `graded: ${n.content}`}
+                            {n.type === 'due_soon' && <><span className="font-bold text-black">{n.content}</span> is due within 24 hours</>}
                           </p>
                           <p className="text-[9px] font-black uppercase tracking-widest text-zinc-300 mt-1.5">{formatTime(n.created_at)}</p>
                         </div>

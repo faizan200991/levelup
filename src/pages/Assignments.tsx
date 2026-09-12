@@ -14,7 +14,14 @@ import CountdownBadge from '../components/CountdownBadge';
 import DashboardLayout from '../components/DashboardLayout';
 import { cn, getLanguageIcon, getDueUrgency } from '../lib/utils';
 
-type ProblemWithClass = Problem & { classroomId: string; className: string };
+type ProblemWithClass = Problem & {
+  classroomId: string;
+  className: string;
+  /** Student view: has the current user submitted this? */
+  submitted?: boolean;
+  /** Teacher view: X of Y enrolled students have submitted. */
+  completion?: { submitted: number; total: number };
+};
 
 export default function Assignments() {
   const { user, profile } = useAuth();
@@ -85,6 +92,44 @@ export default function Assignments() {
           classroomId: row.classroom_id,
           className: row.classrooms?.class_name || 'Unknown Class',
         }));
+
+        const problemIds = mapped.map((p) => p.id);
+
+        // Layer in submission status: students see "did I submit this?",
+        // teachers see "X of Y students have submitted" per assignment —
+        // both drive the calendar dot color and list badges below.
+        if (problemIds.length > 0) {
+          if (profile.role === 'teacher') {
+            const [{ data: subs }, { data: enrolls }] = await Promise.all([
+              supabase.from('submissions').select('problem_id, student_id').in('problem_id', problemIds),
+              supabase.from('enrollments').select('classroom_id').in('classroom_id', classroomIds),
+            ]);
+
+            const totalByClassroom = new Map<string, number>();
+            for (const e of (enrolls || []) as { classroom_id: string }[]) {
+              totalByClassroom.set(e.classroom_id, (totalByClassroom.get(e.classroom_id) || 0) + 1);
+            }
+            const submittersByProblem = new Map<string, Set<string>>();
+            for (const s of (subs || []) as { problem_id: string; student_id: string }[]) {
+              if (!submittersByProblem.has(s.problem_id)) submittersByProblem.set(s.problem_id, new Set());
+              submittersByProblem.get(s.problem_id)!.add(s.student_id);
+            }
+            for (const p of mapped) {
+              p.completion = {
+                submitted: submittersByProblem.get(p.id)?.size || 0,
+                total: totalByClassroom.get(p.classroomId) || 0,
+              };
+            }
+          } else {
+            const { data: subs } = await supabase
+              .from('submissions')
+              .select('problem_id')
+              .eq('student_id', user.id)
+              .in('problem_id', problemIds);
+            const submittedSet = new Set((subs || []).map((s: { problem_id: string }) => s.problem_id));
+            for (const p of mapped) p.submitted = submittedSet.has(p.id);
+          }
+        }
 
         if (!cancelled) setProblems(mapped);
       } catch (err) {
@@ -256,7 +301,24 @@ export default function Assignments() {
                       </div>
                       <p className="text-xs font-bold text-zinc-400 truncate">{p.className} • {p.language}</p>
                     </div>
-                    <CountdownBadge dueDate={p.dueDate} theme="light" />
+                    <div className="flex items-center gap-2 shrink-0">
+                      {profile?.role === 'teacher' && p.completion && (
+                        <span className={cn(
+                          "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border whitespace-nowrap",
+                          p.completion.total > 0 && p.completion.submitted >= p.completion.total
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                            : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                        )}>
+                          {p.completion.submitted}/{p.completion.total}
+                        </span>
+                      )}
+                      {profile?.role !== 'teacher' && p.submitted && (
+                        <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border bg-emerald-50 text-emerald-600 border-emerald-100 whitespace-nowrap">
+                          Submitted
+                        </span>
+                      )}
+                      <CountdownBadge dueDate={p.dueDate} theme="light" />
+                    </div>
                   </Link>
                 </motion.div>
               ))}
@@ -298,6 +360,11 @@ export default function Assignments() {
                 const isSelected = cell.key === selectedDay;
                 const hasOverdue = dayProblems.some((p) => getDueUrgency(p.dueDate) === 'overdue');
                 const hasUrgent = dayProblems.some((p) => getDueUrgency(p.dueDate) === 'urgent' || getDueUrgency(p.dueDate) === 'soon');
+                // Student: green once everything that day is submitted. Teacher: green once
+                // every assignment that day has 100% completion. Otherwise fall back to urgency.
+                const allDone = dayProblems.length > 0 && dayProblems.every((p) =>
+                  profile?.role === 'teacher' ? (p.completion && p.completion.total > 0 && p.completion.submitted >= p.completion.total) : p.submitted
+                );
 
                 return (
                   <button
@@ -317,7 +384,7 @@ export default function Assignments() {
                       <div className="flex items-center gap-1 flex-wrap">
                         <span className={cn(
                           "w-1.5 h-1.5 rounded-full",
-                          hasOverdue || hasUrgent ? "bg-red-500" : "bg-blue-500"
+                          allDone ? "bg-emerald-500" : (hasOverdue || hasUrgent) ? "bg-red-500" : "bg-blue-500"
                         )} />
                         {dayProblems.length > 1 && (
                           <span className={cn("text-[9px] font-black", isSelected ? "text-zinc-400" : "text-zinc-400")}>{dayProblems.length}</span>
@@ -350,7 +417,24 @@ export default function Assignments() {
                     >
                       <p className="font-bold text-sm text-zinc-950 mb-1">{p.title}</p>
                       <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">{p.className}</p>
-                      <CountdownBadge dueDate={p.dueDate} theme="light" />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CountdownBadge dueDate={p.dueDate} theme="light" />
+                        {profile?.role === 'teacher' && p.completion && (
+                          <span className={cn(
+                            "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border",
+                            p.completion.total > 0 && p.completion.submitted >= p.completion.total
+                              ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                              : "bg-zinc-100 text-zinc-500 border-zinc-200"
+                          )}>
+                            {p.completion.submitted}/{p.completion.total} submitted
+                          </span>
+                        )}
+                        {profile?.role !== 'teacher' && p.submitted && (
+                          <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border bg-emerald-50 text-emerald-600 border-emerald-100">
+                            Submitted
+                          </span>
+                        )}
+                      </div>
                     </Link>
                   ))}
                 </div>

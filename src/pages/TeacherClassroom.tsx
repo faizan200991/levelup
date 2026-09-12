@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Badge } from '../components/Badge';
 import CountdownBadge from '../components/CountdownBadge';
+import AssignmentAnalytics from '../components/AssignmentAnalytics';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -25,7 +26,8 @@ import {
   Moon,
   QrCode,
   Maximize2,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -43,7 +45,7 @@ export default function TeacherClassroom({
   theme: 'light' | 'vs-dark',
   setTheme: (t: 'light' | 'vs-dark') => void
 }) {
-  const [activeTab, setActiveTab] = useState<'monitor' | 'heatmap' | 'problems' | 'submissions' | 'resources'>('monitor');
+  const [activeTab, setActiveTab] = useState<'monitor' | 'heatmap' | 'problems' | 'analytics' | 'submissions' | 'resources'>('monitor');
   const [problems, setProblems] = useState<Problem[]>([]);
   const [liveCodes, setLiveCodes] = useState<LiveCode[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -228,6 +230,7 @@ export default function TeacherClassroom({
           { icon: Monitor, label: 'Live Feed', active: activeTab === 'monitor', onClick: () => setActiveTab('monitor') },
           { icon: LayoutGrid, label: 'Heatmap', active: activeTab === 'heatmap', onClick: () => setActiveTab('heatmap') },
           { icon: Code, label: 'Curriculum', active: activeTab === 'problems', onClick: () => setActiveTab('problems') },
+          { icon: BarChart3, label: 'Analytics', active: activeTab === 'analytics', onClick: () => setActiveTab('analytics') },
           { icon: CheckCircle, label: 'Review', active: activeTab === 'submissions', onClick: () => setActiveTab('submissions') },
           { icon: FileText, label: 'Materials', active: activeTab === 'resources', onClick: () => setActiveTab('resources') },
         ],
@@ -513,6 +516,21 @@ export default function TeacherClassroom({
                   </motion.div>
                 ))}
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <motion.div
+              key="analytics"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <div className="mb-8">
+                <h2 className={cn("text-2xl font-display font-bold tracking-tight", theme === 'light' ? "text-zinc-950" : "text-white")}>Assignment Analytics</h2>
+                <p className={cn("text-sm font-medium mt-1", theme === 'light' ? "text-zinc-800" : "text-zinc-400")}>See who's stuck, who's done, and what's generating the most hint requests.</p>
+              </div>
+              <AssignmentAnalytics classroom={classroom} problems={problems} theme={theme} />
             </motion.div>
           )}
 

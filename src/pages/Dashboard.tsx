@@ -215,6 +215,21 @@ export default function Dashboard() {
     }
   }, [user, profile, searchParams, joining, handleJoinClass]);
 
+  // Generate "due in the next 24h" digest notifications once per browser
+  // session. The RPC itself is idempotent (won't duplicate), but we still
+  // gate on sessionStorage so a student navigating around the app doesn't
+  // re-trigger the check on every Dashboard remount.
+  useEffect(() => {
+    if (!user || profile?.role !== 'student') return;
+    const flagKey = `due_soon_checked_${user.id}`;
+    if (sessionStorage.getItem(flagKey)) return;
+    sessionStorage.setItem(flagKey, '1');
+    supabase.rpc('check_due_soon_notifications', { p_student_id: user.id })
+      .then(({ error }) => {
+        if (error) console.error('Due-soon digest check failed:', error);
+      });
+  }, [user, profile]);
+
 
   const momentumQuote = React.useMemo(() => {
     const quotes = [
