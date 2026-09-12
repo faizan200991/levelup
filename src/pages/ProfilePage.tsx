@@ -280,14 +280,10 @@ export default function ProfilePage() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl shadow-[0_4px_30px_rgba(0,0,0,0.02)] border border-white overflow-hidden"
         >
-          <div className="h-32 md:h-44 bg-zinc-950 relative overflow-hidden">
-            <div className="absolute inset-0 bg-blue-600/10" />
-            <div className="absolute inset-0 overflow-hidden">
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] opacity-20 blur-[100px] pointer-events-none">
-                  <div className="w-[800px] h-[800px] bg-blue-600 rounded-full animate-pulse absolute top-0 left-0" />
-                  <div className="w-[600px] h-[600px] bg-emerald-500 rounded-full animate-pulse absolute bottom-0 right-0 delay-1000" />
-               </div>
-            </div>
+          <div className="h-28 md:h-36 bg-zinc-950 relative overflow-hidden">
+            <div className={cn("absolute inset-0", profile.role === 'teacher' ? "bg-blue-600/10" : "bg-emerald-500/10")} />
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full blur-[80px] opacity-30 pointer-events-none"
+                 style={{ backgroundColor: profile.role === 'teacher' ? '#2563EB' : '#10B981' }} />
             
             {isOwnProfile && (
               <div className="absolute top-4 right-4 z-20">
@@ -332,15 +328,15 @@ export default function ProfilePage() {
           </div>
           
           <div className="px-6 md:px-10 pb-8 relative">
-            <div className="flex flex-col md:flex-row items-start gap-6 md:gap-10 -mt-14 md:-mt-16">
+            <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 -mt-12 md:-mt-14">
               {/* Profile Photo */}
               <div className="relative group shrink-0">
-                <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl bg-zinc-50 border-8 border-white shadow-2xl overflow-hidden relative">
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-zinc-50 border-4 border-white shadow-xl overflow-hidden relative">
                   {photoURL ? (
                     <img src={photoURL} alt={profile.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-zinc-100">
-                      <User className="w-16 h-16 text-zinc-300" />
+                      <User className="w-14 h-14 text-zinc-300" />
                     </div>
                   )}
                   
@@ -352,91 +348,82 @@ export default function ProfilePage() {
                         exit={{ opacity: 0 }}
                         className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer text-white backdrop-blur-[2px] transition-all hover:bg-black/60"
                       >
-                        <Camera className="w-8 h-8 mb-2" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Update Photo</span>
+                        <Camera className="w-7 h-7 mb-1.5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Update Photo</span>
                         <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                       </motion.label>
                     )}
                   </AnimatePresence>
                 </div>
                 {/* Active Indicator */}
-                <div className="absolute bottom-4 right-4 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full shadow-lg" />
+                <div className="absolute bottom-2 right-2 w-5 h-5 bg-emerald-500 border-[3px] border-white rounded-full shadow-lg" />
               </div>
               
               {/* Profile Info */}
-              <div className="flex-1 pt-4 md:pt-28">
+              <div className="flex-1 pt-2 md:pt-16 w-full">
                 <AnimatePresence mode="wait">
                   {!editing ? (
                     <motion.div 
                       key="view"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="space-y-4"
+                      className="space-y-5"
                     >
-                      <div>
-                        <h1 className="text-4xl md:text-5xl font-display font-black text-black tracking-tight leading-none mb-4 uppercase">
-                          {profile.name}
-                        </h1>
-                        <div className="flex flex-wrap items-center gap-6">
-                          <div className={cn(
-                            "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border shadow-sm",
-                            profile.role === 'teacher' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"
-                          )}>
-                            <Shield className="w-3.5 h-3.5 inline mr-2" /> {profile.role}
-                          </div>
-                          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-                            <Mail className="w-4 h-4" /> {profile.email}
-                          </div>
-                          <div className="flex items-center gap-2 text-zinc-400 text-xs font-medium">
-                            <Calendar className="w-4 h-4" /> Joined {new Date(profile.createdAt).toLocaleDateString()}
-                          </div>
-                          <div className={cn(
-                            "flex items-center gap-4 px-4 py-1.5 rounded-2xl border transition-all",
-                            profile.role === 'teacher' ? "bg-blue-50 border-blue-100 text-blue-600" : "bg-orange-50 border-orange-100 text-orange-600 shadow-sm"
-                          )}>
-                            <div className="flex flex-col items-end">
-                              <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80">LEVEL {level}</span>
-                              <div className="w-20 h-1 rounded-full bg-black/10 overflow-hidden mt-1">
-                                <motion.div 
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${(xp / 1500) * 100}%` }}
-                                  className={cn("h-full shadow-[0_0_10px_rgba(59,130,246,0.3)]", profile.role === 'teacher' ? "bg-blue-500" : "bg-orange-500")}
-                                />
-                              </div>
-                            </div>
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-3 mb-2">
+                            <h1 className="text-3xl md:text-4xl font-display font-black text-black tracking-tight leading-none">
+                              {profile.name}
+                            </h1>
                             <div className={cn(
-                              "w-8 h-8 rounded-xl flex items-center justify-center border shadow-inner",
-                              profile.role === 'teacher' ? "bg-white border-blue-200" : "bg-white border-orange-200"
+                              "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.15em] border",
+                              profile.role === 'teacher' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"
                             )}>
-                              <Flame className={cn("w-4 h-4", profile.role === 'teacher' ? "text-blue-500" : "text-orange-500")} />
+                              <Shield className="w-3 h-3 inline mr-1.5 -mt-0.5" /> {profile.role}
                             </div>
                           </div>
-                          <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-zinc-500 pt-2 md:pt-0">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-zinc-400 text-xs font-medium">
+                            <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {profile.email}</span>
+                            <span className="w-1 h-1 rounded-full bg-zinc-200 hidden sm:block" />
+                            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Joined {new Date(profile.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Compact stat + level cluster */}
+                        <div className="flex items-center gap-5 shrink-0">
+                          <div className="flex items-center gap-4">
                             {profile.role === 'teacher' ? (
                               <>
-                                <div className="flex flex-col">
-                                  <span className="text-black text-lg">{classroomCount}</span>
-                                  <span className="text-[8px] opacity-60">Classrooms</span>
-                                </div>
-                                <div className="w-px h-8 bg-zinc-100" />
-                                <div className="flex flex-col">
-                                  <span className="text-black text-lg">{totalStudentCount}</span>
-                                  <span className="text-[8px] opacity-60">Students</span>
-                                </div>
+                                <StatPip value={classroomCount} label="Classrooms" />
+                                <StatPip value={totalStudentCount} label="Students" />
                               </>
                             ) : (
                               <>
-                                <div className="flex flex-col">
-                                  <span className="text-black text-lg">{followingCount}</span>
-                                  <span className="text-[8px] opacity-60">Following</span>
-                                </div>
-                                <div className="w-px h-8 bg-zinc-100" />
-                                <div className="flex flex-col">
-                                  <span className="text-black text-lg">{followerCount}</span>
-                                  <span className="text-[8px] opacity-60">Followers</span>
-                                </div>
+                                <StatPip value={followingCount} label="Following" />
+                                <StatPip value={followerCount} label="Followers" />
                               </>
                             )}
+                          </div>
+                          <div className="w-px h-9 bg-zinc-100" />
+                          <div className={cn(
+                            "flex items-center gap-3 pl-1 pr-4 py-1.5 rounded-2xl",
+                            profile.role === 'teacher' ? "bg-blue-50/60" : "bg-orange-50/60"
+                          )}>
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl flex items-center justify-center bg-white shadow-sm shrink-0",
+                            )}>
+                              <Flame className={cn("w-4 h-4", profile.role === 'teacher' ? "text-blue-500" : "text-orange-500")} />
+                            </div>
+                            <div>
+                              <span className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500 block leading-tight">Level {level}</span>
+                              <div className="w-16 h-1 rounded-full bg-black/10 overflow-hidden mt-1">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(xp / 1500) * 100}%` }}
+                                  className={cn("h-full", profile.role === 'teacher' ? "bg-blue-500" : "bg-orange-500")}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -457,9 +444,9 @@ export default function ProfilePage() {
                         </div>
                       )}
                       
-                      <div className="pt-8 border-t border-zinc-50">
-                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Biography</p>
-                        <p className="text-xl text-black font-medium leading-relaxed max-w-3xl italic">
+                      <div className="pt-5 border-t border-zinc-50">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Biography</p>
+                        <p className="text-base text-zinc-700 font-medium leading-relaxed max-w-2xl">
                           {profile.bio || "This user is focused on excellence in coding."}
                         </p>
                       </div>
@@ -559,24 +546,24 @@ export default function ProfilePage() {
           </div>
         </motion.div>
         
-        {/* Statistics or Tags Section (Optional Branding) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-           <ProfileStatCard 
-             icon={<Code2 className="w-6 h-6" />}
+        {/* Compact info strip — replaces the old oversized 3-card layout */}
+        <div className="bg-white rounded-3xl shadow-[0_4px_30px_rgba(0,0,0,0.02)] border border-white grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-zinc-100">
+           <ProfileInfoItem 
+             icon={<Code2 className="w-4 h-4" />}
              label="Learning Path"
-             value={profile.learningPath || "Not Specified"}
+             value={profile.learningPath || "Not specified"}
              description={profile.learningPathSubtitle || "Add your path in settings"}
            />
-           <ProfileStatCard 
-             icon={<MapPin className="w-6 h-6" />}
+           <ProfileInfoItem 
+             icon={<MapPin className="w-4 h-4" />}
              label="Location"
-             value={profile.location || "Not Specified"}
+             value={profile.location || "Not specified"}
              description={profile.locationSubtitle || "Add your location in settings"}
            />
-           <ProfileStatCard 
-             icon={<Calendar className="w-6 h-6" />}
+           <ProfileInfoItem 
+             icon={<Calendar className="w-4 h-4" />}
              label="Class Status"
-             value={profile.classStatus || "Not Specified"}
+             value={profile.classStatus || "Not specified"}
              description={profile.classStatusSubtitle || "Update your status in settings"}
            />
         </div>
@@ -585,18 +572,26 @@ export default function ProfilePage() {
   );
 }
 
-function ProfileStatCard({ icon, label, value, description }: { icon: React.ReactNode, label: string, value: string, description: string }) {
+function StatPip({ value, label }: { value: number, label: string }) {
   return (
-    <motion.div 
-      whileHover={{ y: -8 }}
-      className="bg-white p-10 rounded-[3rem] shadow-xl border border-white group"
-    >
-      <div className="w-16 h-16 bg-zinc-50 rounded-2xl flex items-center justify-center text-blue-600 mb-8 border border-zinc-100 shadow-inner group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+    <div className="flex flex-col items-center">
+      <span className="text-black text-lg font-display font-black leading-none">{value}</span>
+      <span className="text-[8px] font-black uppercase tracking-widest text-zinc-400 mt-1">{label}</span>
+    </div>
+  );
+}
+
+function ProfileInfoItem({ icon, label, value, description }: { icon: React.ReactNode, label: string, value: string, description: string }) {
+  return (
+    <div className="p-6 flex items-start gap-4">
+      <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-500 border border-zinc-100 shrink-0">
         {icon}
       </div>
-      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">{label}</p>
-      <h3 className="text-2xl font-display font-bold text-black tracking-tight mb-3 uppercase">{value}</h3>
-      <p className="text-zinc-500 font-medium text-sm leading-relaxed">{description}</p>
-    </motion.div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.15em] mb-1">{label}</p>
+        <h3 className="text-sm font-bold text-zinc-950 tracking-tight truncate">{value}</h3>
+        <p className="text-zinc-400 font-medium text-xs mt-0.5 truncate">{description}</p>
+      </div>
+    </div>
   );
 }

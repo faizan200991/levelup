@@ -286,54 +286,28 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-          
-          <motion.div 
-            initial={{ opacity: 0, x: -15 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mt-5 flex items-center gap-4 group cursor-default"
-          >
-             <div className="w-1 h-6 bg-zinc-900 group-hover:bg-blue-600 transition-all duration-700 rounded-full" />
-             <div className="max-w-xl">
-                <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.3em] mb-0.5">LEARNING INSIGHT</p>
-                <p className="text-xs font-semibold text-zinc-500 italic leading-relaxed text-balance">"{momentumQuote.text}" — <span className="not-italic font-black text-zinc-400 opacity-60 ml-1">{momentumQuote.author}</span></p>
-             </div>
-          </motion.div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 relative z-10">
-        <StatCard 
-          icon={<BookOpen className="w-4 h-4" />} 
-          label="Active Classrooms" 
-          value={classes.length < 10 ? `0${classes.length}` : classes.length.toString()} 
-          color="blue"
-          delay={0.1}
-        />
-        <StatCard 
-          icon={<Activity className="w-4 h-4" />} 
-          label="Recent Activities" 
-          value={activities.length < 10 ? `0${activities.length}` : activities.length.toString()} 
-          color="zinc"
-          delay={0.2}
-        />
-        <StatCard 
-          icon={<CheckCircle className="w-4 h-4" />} 
-          label="Completed Tasks" 
-          value={activities.filter(a => a.type === 'submission' && (a.status === 'correct' || a.status === 'completed')).length.toString().padStart(2, '0')} 
-          color="green"
-          delay={0.3}
-        />
+      <div className="bg-white rounded-3xl shadow-[0_4px_30px_rgba(0,0,0,0.02)] border border-white mb-6 relative z-10 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-zinc-100">
+          <DashStatItem icon={<BookOpen className="w-4 h-4" />} label="Active Classrooms" value={classes.length < 10 ? `0${classes.length}` : classes.length.toString()} />
+          <DashStatItem icon={<Activity className="w-4 h-4" />} label="Recent Activity" value={activities.length < 10 ? `0${activities.length}` : activities.length.toString()} />
+          <DashStatItem icon={<CheckCircle className="w-4 h-4" />} label="Completed Tasks" value={activities.filter(a => a.type === 'submission' && (a.status === 'correct' || a.status === 'completed')).length.toString().padStart(2, '0')} />
+        </div>
+        <div className="px-6 py-3 border-t border-zinc-100 bg-zinc-50/50">
+          <p className="text-xs text-zinc-500 font-medium italic truncate">"{momentumQuote.text}" <span className="not-italic text-zinc-400">— {momentumQuote.author}</span></p>
+        </div>
       </div>
 
-      <Link to="/ai-tutor" className="block mb-10 relative z-10">
+      <Link to="/ai-tutor" className="block mb-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.4 }}
-          className="group relative overflow-hidden rounded-3xl bg-zinc-950 p-6 md:p-7 flex items-center justify-between gap-6 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-500"
+          className="group relative overflow-hidden rounded-3xl bg-zinc-950 p-6 md:p-7 flex items-center justify-between gap-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-500"
         >
-          <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-600/30 rounded-full blur-3xl group-hover:bg-blue-500/40 transition-colors duration-500" />
+          <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-colors duration-500" />
           <div className="flex items-center gap-4 relative z-10">
             <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
               <Sparkles className="w-6 h-6 text-white" />
@@ -550,27 +524,16 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ icon, label, value, color, delay = 0 }: { icon: React.ReactNode, label: string, value: string, color: string, delay?: number }) {
-  const colorClasses = {
-    zinc: "bg-zinc-900 text-white",
-    blue: "bg-blue-600 text-white",
-    green: "bg-emerald-500 text-white",
-  }[color] || "bg-zinc-900 text-white";
-
+function DashStatItem({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="glass p-4 rounded-2xl border-white shadow-advanced flex items-center gap-4 group hover:-translate-y-1 transition-all duration-500"
-    >
-      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md transition-all duration-500 group-hover:scale-110 group-hover:rotate-3", colorClasses)}>
+    <div className="p-6 flex items-center gap-4">
+      <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-500 border border-zinc-100 shrink-0">
         {icon}
       </div>
       <div>
-        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.25em] mb-0.5">{label}</p>
+        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.15em] mb-0.5">{label}</p>
         <p className="text-xl font-display font-black text-zinc-900 tracking-tight leading-none">{value}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
