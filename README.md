@@ -67,6 +67,8 @@ LEVELUP consolidates live demonstration, structured assignments, a synchronized 
 | **Peer Learning Hub** | Opt-in social layer — students share progress, follow peers, comment | Sustains engagement and accountability between sessions |
 | **Multi-Channel Notifications** | Real-time push notifications for grading, follows, likes, comments | No need to check five different apps to know what happened |
 | **Row Level Security on Every Table** | Postgres RLS scopes every table so a student can only see their own live code, and only their own teacher can see it | Live student code and feedback data are never exposed to the wrong user |
+| **Deadline Awareness, Search & Calendar** | Optional due dates on assignments with a self-updating countdown badge, plus a cross-classroom page to search every assignment or view them on a month calendar | Removes the need to check every classroom individually to find what's due and when |
+| **Assignment Analytics** | Per-assignment breakdown of not-started/in-progress/submitted students, average time-to-submit, and which assignment generates the most AI-tutor hint requests | Surfaces which students are stuck and which concepts need re-teaching, without manual tracking |
 
 ## 📸 Screenshots
 
@@ -116,6 +118,7 @@ npm install
 2. In your Supabase project dashboard, go to **Settings → API** and copy your Project URL and anon/public key into `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 3. Add your Gemini API key to `GEMINI_API_KEY` and `VITE_GEMINI_API_KEY`.
 4. In the Supabase SQL Editor, run the full contents of `supabase_schema.sql` to create all tables, RLS policies, and triggers.
+   - **Already have an existing LEVELUP database?** Run `supabase_migration_duedate.sql` and `supabase_migration_analytics.sql` instead — they add the due-date and analytics features to an existing schema without touching your data.
 
 ### Running Locally
 ```bash
