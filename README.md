@@ -72,17 +72,13 @@ LEVELUP consolidates live demonstration, structured assignments, a synchronized 
 
 ## 📸 Screenshots
 
-<!--
-  Add your own screenshots here — drop image files into docs/screenshots/
-  and update the paths below. Recommended shots: the live-synced editor
-  mid-session, the AI hint firing on a real bug, the teacher's live roster,
-  and the Peer Hub feed.
--->
-
 | | |
 |---|---|
-| **Live Synced Classroom** <br> ![Live Classroom](docs/screenshots/classroom.png) | **AI Guided-Discovery Hint** <br> ![AI Hint](docs/screenshots/ai-hint.png) |
-| **Teacher Live Roster** <br> ![Teacher Roster](docs/screenshots/teacher-roster.png) | **Peer Hub** <br> ![Peer Hub](docs/screenshots/peer-hub.png) |
+| **Student Dashboard** <br> ![Student Dashboard](docs/screenshots/student-dashboard.png) | **Teacher Dashboard** <br> ![Teacher Dashboard](docs/screenshots/teacher-dashboard.png) |
+| **Live-Synced Classroom (Teacher View)** <br> ![Teacher Live Feed](docs/screenshots/teacher-live-feed.png) | **Student Classroom Editor** <br> ![Student Classroom Editor](docs/screenshots/student-classroom-editor.png) |
+| **AI Guided-Discovery Tutor** <br> ![AI Tutor](docs/screenshots/ai-tutor.png) | **Submissions Review (Teacher)** <br> ![Teacher Review](docs/screenshots/teacher-review.png) |
+| **Cross-Classroom Assignments & Calendar** <br> ![Assignments Calendar](docs/screenshots/assignments-calendar.png) | **Peer Hub** <br> ![Peer Hub](docs/screenshots/peer-hub.png) |
+| **Login** <br> ![Login](docs/screenshots/login.png) | **Register** <br> ![Register](docs/screenshots/register.png) |
 
 ## 🛠 Technical Architecture & Stack
 
